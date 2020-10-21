@@ -11,6 +11,7 @@ from sentor.Executor import Executor
 from sentor.TopicMapper import TopicMapper
 
 from threading import Thread, Event, Lock
+import socket
 import rostopic
 import rosgraph
 import rospy
@@ -33,7 +34,7 @@ class TopicMonitor(Thread):
 
 
     def __init__(self, topic_name, signal_when_config, signal_lambdas_config, processes, 
-                 timeout, default_notifications, _map, event_callback):
+                 timeout, default_notifications, event_callback):
         Thread.__init__(self)
 
         self.topic_name = topic_name
@@ -45,7 +46,6 @@ class TopicMonitor(Thread):
         else:
             self.timeout = 0.1
         self.default_notifications = default_notifications
-        self.map = _map
         self._event_callback = event_callback
         self.nodes = []
         
@@ -69,7 +69,6 @@ class TopicMonitor(Thread):
         
         if processes:
             self.executor = Executor(processes, self.event_callback)
-
 
 
     def _instantiate_monitors(self):
@@ -143,17 +142,15 @@ class TopicMonitor(Thread):
 
                     self.lambda_monitor_list.append(lambda_monitor)
             print ""
-            
-        if self.map is not None:
-            print "Mapping topic arg "+ bcolors.OKGREEN + self.map["topic_arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n'
-            self.topic_mapper = TopicMapper(self.map, real_topic, msg_class) 
 
         self.is_instantiated = True
 
         return True
+    
 
     def event_callback(self, string, type, msg=""):
         self._event_callback(string, type, msg, self.nodes, self.topic_name)
+        
         
     def process_signal_config(self):
         

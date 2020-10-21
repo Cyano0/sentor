@@ -6,17 +6,33 @@ Created on Tue Feb 25 08:55:41 2020
 """
 ##########################################################################################
 from __future__ import division
-import rospy, numpy as np, tf, math
-from threading import Event
+from threading import Thread, Event
+
+import rospy, rostopic, tf
+import numpy as np, math
 
 
-class TopicMapper(object):
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+##########################################################################################
+
+
+##########################################################################################
+class TopicMapper(Thread):
     
     
-    def __init__(self, config, topic, msg_class):
+    def __init__(self, config):
+        Thread.__init__(self)
         
         self.config = config
-        self.config["topic"] = topic
+        self.topic_name = config["name"]
         
         self.x_min, self.x_max = config["limits"][:2]
         self.y_min, self.y_max = config["limits"][2:]
@@ -34,7 +50,7 @@ class TopicMapper(object):
         
         self._stop_event = Event()
         
-        rospy.Subscriber(topic, msg_class, self.topic_cb)
+        self.is_instantiated = self.instantiate()
         
         
     def init_map(self):
@@ -50,6 +66,25 @@ class TopicMapper(object):
         if self.config["stat"] == "std":
             self.wma = np.zeros((self.nx, self.ny))
             self.wma[:] = np.nan
+            
+            
+    def instantiate(self):
+        
+        try:
+            msg_class, real_topic, _ = rostopic.get_topic_class(self.topic_name, blocking=False)
+            topic_type, _, _ = rostopic.get_topic_type(self.topic_name, blocking=False)
+        except rostopic.ROSTopicException:
+            rospy.logerr("Topic {} type cannot be determined, or ROS master cannot be contacted".format(self.topic_name))
+            return False
+
+        if real_topic is None:
+            rospy.logerr("Topic {} is not published".format(self.topic_name))
+            return False
+        
+        print "Mapping topic arg "+ bcolors.OKGREEN + self.config["arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n'
+        rospy.Subscriber(real_topic, msg_class, self.topic_cb)
+        
+        return True
             
  
     def topic_cb(self, msg):
@@ -81,7 +116,7 @@ class TopicMapper(object):
     def process_arg(self, msg):
         
         try:
-            self.topic_arg = eval(self.config["topic_arg"])
+            self.topic_arg = eval(self.config["arg"])
         except Exception as e:
             rospy.logwarn("Exception while evaluating '{}': {}".format(self.config["topic_arg"], e))
             return False

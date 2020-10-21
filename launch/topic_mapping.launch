@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <arg name="config_file" default=""/>
+  <arg name="map_pub_rate" default="0"/>
+  <arg name="map_plt_rate" default="0"/>
+
+  <node pkg="sentor" type="topic_mapping_node.py" name="topic_mapper" output="screen">
+    <param name="~config_file" value="$(arg config_file)" />
+    <param name="~map_pub_rate" value="$(arg map_pub_rate)" />
+    <param name="~map_plt_rate" value="$(arg map_plt_rate)" />
+  </node>	
+
+</launch>

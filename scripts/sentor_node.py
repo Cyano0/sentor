@@ -7,7 +7,6 @@
 from __future__ import division
 from sentor.TopicMonitor import TopicMonitor
 from sentor.SafetyMonitor import SafetyMonitor
-from sentor.TopicMapServer import TopicMapServer
 from std_msgs.msg import String
 from sentor.msg import SentorEvent
 from std_srvs.srv import Empty, EmptyResponse
@@ -48,9 +47,6 @@ def stop_monitoring(_):
         topic_monitor.stop_monitor()
             
     safety_monitor.stop_monitor()
-    
-    if topic_mapping:
-        topic_map_server.stop()
 
     rospy.logwarn("sentor_node stopped monitoring")
     ans = EmptyResponse()
@@ -62,9 +58,6 @@ def start_monitoring(_):
         topic_monitor.start_monitor()
             
     safety_monitor.start_monitor()
-    
-    if topic_mapping:
-        topic_map_server.start()
 
     rospy.logwarn("sentor_node started monitoring")
     ans = EmptyResponse()
@@ -118,7 +111,6 @@ if __name__ == "__main__":
     auto_safety_tagging = rospy.get_param("~auto_safety_tagging", True)        
     safety_monitor = SafetyMonitor(safe_operation_timeout, safety_pub_rate, auto_safety_tagging, event_callback)   
 
-    topic_mapping = False
     topic_monitors = []
     print "Monitoring topics:"
     for topic in topics:
@@ -133,7 +125,6 @@ if __name__ == "__main__":
         processes = []
         timeout = 0
         default_notifications = True
-        _map = None
         include = True
         if 'signal_when' in topic.keys():
             signal_when = topic['signal_when']
@@ -145,27 +136,17 @@ if __name__ == "__main__":
             timeout = topic['timeout']
         if 'default_notifications' in topic.keys():
             default_notifications = topic['default_notifications']
-        if 'map' in topic.keys():
-            _map = topic['map']
         if 'include' in topic.keys():
             include = topic['include']
-            
-        if include and _map is not None:
-            topic_mapping = True
 
         if include:
             topic_monitor = TopicMonitor(topic_name, signal_when, signal_lambdas, processes, 
-                                         timeout, default_notifications, _map, event_callback)
+                                         timeout, default_notifications, event_callback)
 
             topic_monitors.append(topic_monitor)
             safety_monitor.register_monitors(topic_monitor)
             
     time.sleep(1)
-    
-    if topic_mapping:
-        map_pub_rate = rospy.get_param("~map_pub_rate", 0) 
-        map_plt_rate = rospy.get_param("~map_plt_rate", 0) 
-        topic_map_server = TopicMapServer(topic_monitors, map_pub_rate, map_plt_rate)
 
     # start monitoring
     for topic_monitor in topic_monitors:
