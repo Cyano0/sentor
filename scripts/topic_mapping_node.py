@@ -3,7 +3,6 @@
 @author: Adam Binch (abinch@sagarobotics.com)
 """
 ##########################################################################################
-from __future__ import division
 from sentor.TopicMapper import TopicMapper
 from sentor.TopicMapServer import TopicMapServer
 from std_srvs.srv import Empty, EmptyResponse
@@ -28,22 +27,6 @@ def __signal_handler(signum, frame):
     join_mappers()
     print "stopped."
     os._exit(signal.SIGTERM)
-    
-
-def stop_mapping(_):
-    topic_map_server.stop()
-
-    rospy.logwarn("topic_mapping_node stopped mapping")
-    ans = EmptyResponse()
-    return ans
-    
-
-def start_mapping(_):
-    topic_map_server.start()
-
-    rospy.logwarn("topic_mapping_node started mapping")
-    ans = EmptyResponse()
-    return ans
 ##########################################################################################
     
 
@@ -59,9 +42,6 @@ if __name__ == "__main__":
     except Exception as e:
         rospy.logerr("No configuration file provided: %s" % e)
         topics = []
-
-    stop_srv = rospy.Service('/sentor/stop_mapping', Empty, stop_mapping)
-    start_srv = rospy.Service('/sentor/start_mapping', Empty, start_mapping)
 
     topic_mappers = []
     print "Mapping topics:"
