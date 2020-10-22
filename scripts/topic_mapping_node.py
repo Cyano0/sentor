@@ -12,14 +12,12 @@ import rospy
 import time
 import yaml
 import os
-##########################################################################################
 
 
-##########################################################################################
 def __signal_handler(signum, frame):
     def kill_mappers():
         for topic_mapper in topic_mappers:
-            topic_mapper.kill_mapper()
+            topic_mapper.stop_mapping()
     def join_mappers():
         for topic_mapper in topic_mappers:
             topic_mapper.join()

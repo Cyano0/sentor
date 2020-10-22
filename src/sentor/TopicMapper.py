@@ -45,10 +45,12 @@ class TopicMapper(Thread):
         self.shape = [self.nx, self.ny]
         
         self.init_map()
-
-        self.tf_listener = tf.TransformListener()          
+        
+        self.stat = self.get_stat()
         
         self._stop_event = Event()
+
+        self.tf_listener = tf.TransformListener()          
         
         self.is_instantiated = self.instantiate()
         
@@ -66,6 +68,61 @@ class TopicMapper(Thread):
         if self.config["stat"] == "std":
             self.wma = np.zeros((self.nx, self.ny))
             self.wma[:] = np.nan
+            
+            
+    def get_stat(self):
+        
+        if self.config["stat"] == "mean":
+            stat = self._mean
+            
+        elif self.config["stat"] == "sum":
+            stat = self._sum
+            
+        elif self.config["stat"] == "min":
+            stat = self._min
+            
+        elif self.config["stat"] == "max":
+            stat = self._max
+            
+        elif self.config["stat"] == "std":
+            stat = self._std
+            
+        else:
+            rospy.logwarn("Statistic of type '{}' not supported".format(self.config["stat"]))
+            stat = None
+            exit()
+            
+        return stat
+    
+    
+    def _mean(self, z, N):
+        return self.weighted_mean(z, self.topic_arg, N)
+    
+    
+    def _sum(self, z, N):
+        return z + self.topic_arg
+    
+    
+    def _min(self, z, N):
+        return np.min([z, self.topic_arg])
+    
+    
+    def _max(self, z, N):
+        return np.max([z, self.topic_arg])
+    
+    
+    def _std(self, z, N):
+        wm = self.wma[self.ix, self.iy]
+        if np.isnan(wm): wm=0
+
+        wm = self.weighted_mean(wm, self.topic_arg, N)
+        self.wma[self.ix, self.iy] = wm
+            
+        return np.sqrt(self.weighted_mean(z**2, (wm-self.topic_arg)**2, N))
+    
+    
+    def weighted_mean(self, m, x, N):
+        return (1/N) * ((m * (N-1)) + x)
             
             
     def instantiate(self):
@@ -144,45 +201,12 @@ class TopicMapper(Thread):
         
         z = self.map[ix, iy]
         if np.isnan(z): z=0
-        z = self.compute_stat(z, N)
+        z = self.stat(z, N)
             
         self.map[ix, iy] = z        
         self.index = [ix, iy]
         self.position = [x, y]
         self.arg_at_position = z
-        
-        
-    def compute_stat(self, z, N):
-        
-        weighted_mean = lambda m, x: (1/N) * ((m * (N-1)) + x)
-        
-        
-        if self.config["stat"] == "mean":
-            z = weighted_mean(z, self.topic_arg)
-            
-        elif self.config["stat"] == "sum":
-            z += self.topic_arg
-            
-        elif self.config["stat"] == "min":
-            z = np.min([z, self.topic_arg])
-            
-        elif self.config["stat"] == "max":
-            z = np.max([z, self.topic_arg])
-            
-        elif self.config["stat"] == "std":
-            wm = self.wma[self.ix, self.iy]
-            if np.isnan(wm): wm=0
-
-            wm = weighted_mean(wm, self.topic_arg)
-            self.wma[self.ix, self.iy] = wm
-            
-            z = np.sqrt(weighted_mean(z**2, (wm-self.topic_arg)**2))
-
-        else:
-            rospy.logwarn("Statistic of type '{}' not supported".format(self.config["stat"]))
-            z = np.nan; 
-            
-        return z
         
                         
     def stop_mapping(self):
