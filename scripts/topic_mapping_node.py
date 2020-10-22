@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     topic_mappers = []
     print "Mapping topics:"
-    for topic in topics:
+    for i, topic in enumerate(topics):
         try:
             topic_name = topic["name"]
         except Exception as e:
@@ -55,7 +55,7 @@ if __name__ == "__main__":
             include = topic["include"]
 
         if include:
-            topic_mappers.append(TopicMapper(topic))
+            topic_mappers.append(TopicMapper(topic, i))
             
     time.sleep(1)
     

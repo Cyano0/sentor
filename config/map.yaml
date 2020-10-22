@@ -1,11 +1,12 @@
-- name : "/row_detector/health_monitor"
+- name: "/row_detector/health_monitor"
   arg: "msg.lines_accepted.data == False"
   stat: "mean"
   limits: [11.0, 25.0, -40.0, -8.0]
   resolution: 1.5
   include: True
 
-- name : "/row_detector/health_monitor"
+- name: "/row_detector/health_monitor"
+  rate: 5.0 
   arg: "msg.lines_accepted.data == False"
   stat: "std"
   limits: [11.0, 25.0, -40.0, -8.0]

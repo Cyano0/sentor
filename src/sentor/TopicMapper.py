@@ -7,6 +7,7 @@ Created on Tue Feb 25 08:55:41 2020
 ##########################################################################################
 from __future__ import division
 from threading import Thread, Event
+from rosthrottle import MessageThrottle
 
 import rospy, rostopic, tf
 import numpy as np, math
@@ -28,10 +29,11 @@ class bcolors:
 class TopicMapper(Thread):
     
     
-    def __init__(self, config):
+    def __init__(self, config, thread_num):
         Thread.__init__(self)
         
         self.config = config
+        self.thread_num = thread_num
         self.topic_name = config["name"]
         
         self.x_min, self.x_max = config["limits"][:2]
@@ -139,8 +141,20 @@ class TopicMapper(Thread):
             return False
         
         print "Mapping topic arg "+ bcolors.OKGREEN + self.config["arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n'
-        rospy.Subscriber(real_topic, msg_class, self.topic_cb)
         
+        rate = 0
+        if "rate" in self.config:
+            rate = self.config["rate"]
+            
+        if rate > 0:
+            subscribed_topic = "/sentor/" + str(self.thread_num) + real_topic
+            bt = MessageThrottle(real_topic, subscribed_topic, rate)
+            bt.start()
+        else:
+            subscribed_topic = real_topic
+            
+        rospy.Subscriber(subscribed_topic, msg_class, self.topic_cb)
+            
         return True
             
  
