@@ -8,9 +8,11 @@ Created on Tue Feb 25 08:55:41 2020
 from __future__ import division
 from threading import Thread, Event
 from rosthrottle import MessageThrottle
+from cv2 import imread
 
 import rospy, rostopic, tf
 import numpy as np, math
+import yaml, os
 
 
 class bcolors:
@@ -36,8 +38,7 @@ class TopicMapper(Thread):
         self.thread_num = thread_num
         self.topic_name = config["name"]
         
-        self.x_min, self.x_max = config["limits"][:2]
-        self.y_min, self.y_max = config["limits"][2:]
+        self.set_limits()
         
         self.x_bins = np.arange(self.x_min, self.x_max, config["resolution"])
         self.y_bins = np.arange(self.y_min, self.y_max, config["resolution"])
@@ -55,6 +56,24 @@ class TopicMapper(Thread):
         self.tf_listener = tf.TransformListener()          
         
         self.is_instantiated = self.instantiate()
+        
+        
+    def set_limits(self):
+        
+        if "map" in self.config:
+            map_config = yaml.load(file(self.config["map"], 'r'))
+            dims = imread(os.path.dirname(self.config["map"]) + "/" + map_config["image"]).shape
+            
+            self.x_min, self.x_max = map_config["origin"][0], map_config["origin"][0] + (map_config["resolution"] * dims[0]) 
+            self.y_min, self.y_max = map_config["origin"][1], map_config["origin"][1] + (map_config["resolution"] * dims[1]) 
+            
+        if "limits" in self.config:
+            self.x_min, self.x_max = self.config["limits"][:2]
+            self.y_min, self.y_max = self.config["limits"][2:]
+            
+        if "map" not in self.config and "limits" not in self.config:
+            rospy.logerr("No topic map limits specified")
+            exit()
         
         
     def init_map(self):
@@ -90,7 +109,7 @@ class TopicMapper(Thread):
             stat = self._std
             
         else:
-            rospy.logwarn("Statistic of type '{}' not supported".format(self.config["stat"]))
+            rospy.logerr("Statistic of type '{}' not supported".format(self.config["stat"]))
             stat = None
             exit()
             
@@ -147,7 +166,7 @@ class TopicMapper(Thread):
             rate = self.config["rate"]
             
         if rate > 0:
-            subscribed_topic = "/sentor/" + str(self.thread_num) + real_topic
+            subscribed_topic = "/sentor/mapping/" + str(self.thread_num) + real_topic
             bt = MessageThrottle(real_topic, subscribed_topic, rate)
             bt.start()
         else:
