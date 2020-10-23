@@ -7,9 +7,12 @@ Created on Tue Feb 25 08:55:41 2020
 ##########################################################################################
 from __future__ import division
 from threading import Thread, Event
+from rosthrottle import MessageThrottle
+from cv2 import imread
 
 import rospy, rostopic, tf
 import numpy as np, math
+import yaml, os
 
 
 class bcolors:
@@ -28,14 +31,14 @@ class bcolors:
 class TopicMapper(Thread):
     
     
-    def __init__(self, config):
+    def __init__(self, config, thread_num):
         Thread.__init__(self)
         
         self.config = config
+        self.thread_num = thread_num
         self.topic_name = config["name"]
         
-        self.x_min, self.x_max = config["limits"][:2]
-        self.y_min, self.y_max = config["limits"][2:]
+        self.set_limits()
         
         self.x_bins = np.arange(self.x_min, self.x_max, config["resolution"])
         self.y_bins = np.arange(self.y_min, self.y_max, config["resolution"])
@@ -45,12 +48,32 @@ class TopicMapper(Thread):
         self.shape = [self.nx, self.ny]
         
         self.init_map()
+        
+        self.stat = self.get_stat()
+        
+        self._stop_event = Event()
 
         self.tf_listener = tf.TransformListener()          
         
-        self._stop_event = Event()
-        
         self.is_instantiated = self.instantiate()
+        
+        
+    def set_limits(self):
+        
+        if "map" in self.config:
+            map_config = yaml.load(file(self.config["map"], 'r'))
+            dims = imread(os.path.dirname(self.config["map"]) + "/" + map_config["image"]).shape
+            
+            self.x_min, self.x_max = map_config["origin"][0], map_config["origin"][0] + (map_config["resolution"] * dims[0]) 
+            self.y_min, self.y_max = map_config["origin"][1], map_config["origin"][1] + (map_config["resolution"] * dims[1]) 
+            
+        if "limits" in self.config:
+            self.x_min, self.x_max = self.config["limits"][:2]
+            self.y_min, self.y_max = self.config["limits"][2:]
+            
+        if "map" not in self.config and "limits" not in self.config:
+            rospy.logerr("No topic map limits specified")
+            exit()
         
         
     def init_map(self):
@@ -68,6 +91,61 @@ class TopicMapper(Thread):
             self.wma[:] = np.nan
             
             
+    def get_stat(self):
+        
+        if self.config["stat"] == "mean":
+            stat = self._mean
+            
+        elif self.config["stat"] == "sum":
+            stat = self._sum
+            
+        elif self.config["stat"] == "min":
+            stat = self._min
+            
+        elif self.config["stat"] == "max":
+            stat = self._max
+            
+        elif self.config["stat"] == "std":
+            stat = self._std
+            
+        else:
+            rospy.logerr("Statistic of type '{}' not supported".format(self.config["stat"]))
+            stat = None
+            exit()
+            
+        return stat
+    
+    
+    def _mean(self, z, N):
+        return self.weighted_mean(z, self.topic_arg, N)
+    
+    
+    def _sum(self, z, N):
+        return z + self.topic_arg
+    
+    
+    def _min(self, z, N):
+        return np.min([z, self.topic_arg])
+    
+    
+    def _max(self, z, N):
+        return np.max([z, self.topic_arg])
+    
+    
+    def _std(self, z, N):
+        wm = self.wma[self.ix, self.iy]
+        if np.isnan(wm): wm=0
+
+        wm = self.weighted_mean(wm, self.topic_arg, N)
+        self.wma[self.ix, self.iy] = wm
+            
+        return np.sqrt(self.weighted_mean(z**2, (wm-self.topic_arg)**2, N))
+    
+    
+    def weighted_mean(self, m, x, N):
+        return (1/N) * ((m * (N-1)) + x)
+            
+            
     def instantiate(self):
         
         try:
@@ -82,8 +160,20 @@ class TopicMapper(Thread):
             return False
         
         print "Mapping topic arg "+ bcolors.OKGREEN + self.config["arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n'
-        rospy.Subscriber(real_topic, msg_class, self.topic_cb)
         
+        rate = 0
+        if "rate" in self.config:
+            rate = self.config["rate"]
+            
+        if rate > 0:
+            subscribed_topic = "/sentor/mapping/" + str(self.thread_num) + real_topic
+            bt = MessageThrottle(real_topic, subscribed_topic, rate)
+            bt.start()
+        else:
+            subscribed_topic = real_topic
+            
+        rospy.Subscriber(subscribed_topic, msg_class, self.topic_cb)
+            
         return True
             
  
@@ -144,45 +234,12 @@ class TopicMapper(Thread):
         
         z = self.map[ix, iy]
         if np.isnan(z): z=0
-        z = self.compute_stat(z, N)
+        z = self.stat(z, N)
             
         self.map[ix, iy] = z        
         self.index = [ix, iy]
         self.position = [x, y]
         self.arg_at_position = z
-        
-        
-    def compute_stat(self, z, N):
-        
-        weighted_mean = lambda m, x: (1/N) * ((m * (N-1)) + x)
-        
-        
-        if self.config["stat"] == "mean":
-            z = weighted_mean(z, self.topic_arg)
-            
-        elif self.config["stat"] == "sum":
-            z += self.topic_arg
-            
-        elif self.config["stat"] == "min":
-            z = np.min([z, self.topic_arg])
-            
-        elif self.config["stat"] == "max":
-            z = np.max([z, self.topic_arg])
-            
-        elif self.config["stat"] == "std":
-            wm = self.wma[self.ix, self.iy]
-            if np.isnan(wm): wm=0
-
-            wm = weighted_mean(wm, self.topic_arg)
-            self.wma[self.ix, self.iy] = wm
-            
-            z = np.sqrt(weighted_mean(z**2, (wm-self.topic_arg)**2))
-
-        else:
-            rospy.logwarn("Statistic of type '{}' not supported".format(self.config["stat"]))
-            z = np.nan; 
-            
-        return z
         
                         
     def stop_mapping(self):

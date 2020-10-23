@@ -49,7 +49,6 @@ class TopicMapServer(object):
             
             
     def write_maps(self, req):
-        # broke after move to ubuntu 18
     
         message = "Saving maps: "
         for mapper in self.topic_mappers:
@@ -119,6 +118,7 @@ class TopicMapServer(object):
             
             
     def plot_maps(self, event=None):
+        # broke after move to ubuntu 18
         
         if not self._stop_event.isSet():
             

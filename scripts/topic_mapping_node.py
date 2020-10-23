@@ -12,14 +12,12 @@ import rospy
 import time
 import yaml
 import os
-##########################################################################################
 
 
-##########################################################################################
 def __signal_handler(signum, frame):
     def kill_mappers():
         for topic_mapper in topic_mappers:
-            topic_mapper.kill_mapper()
+            topic_mapper.stop_mapping()
     def join_mappers():
         for topic_mapper in topic_mappers:
             topic_mapper.join()
@@ -45,7 +43,7 @@ if __name__ == "__main__":
 
     topic_mappers = []
     print "Mapping topics:"
-    for topic in topics:
+    for i, topic in enumerate(topics):
         try:
             topic_name = topic["name"]
         except Exception as e:
@@ -57,7 +55,7 @@ if __name__ == "__main__":
             include = topic["include"]
 
         if include:
-            topic_mappers.append(TopicMapper(topic))
+            topic_mappers.append(TopicMapper(topic, i))
             
     time.sleep(1)
     
