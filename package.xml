@@ -23,7 +23,6 @@
   <build_depend>actionlib</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
-  <build_depend>rosthrottle</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>rosgraph</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
@@ -35,7 +34,6 @@
   <run_depend>std_msgs</run_depend>
   <run_depend>std_srvs</run_depend>
   <run_depend>message_runtime</run_depend>
-  <run_depend>rosthrottle</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>rosgraph</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>
