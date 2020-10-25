@@ -2,7 +2,7 @@
 <package>
   <name>sentor</name>
   <version>2.1.0</version>
-  <description>The sentor package, to check that sensor messages get published</description>
+  <description>The sentor package, to monitor ROS messages</description>
 
   <maintainer email="fdelduchetto@lincoln.ac.uk">Francesco Del Duchetto</maintainer>
   <maintainer email="abinch@sagarobotics.com">Adam Binch</maintainer>
@@ -23,6 +23,11 @@
   <build_depend>actionlib</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
+  <build_depend>rosthrottle</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>rosgraph</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+
   <run_depend>rospy</run_depend>
   <run_depend>rostopic</run_depend>
   <run_depend>rosservice</run_depend>
@@ -30,6 +35,10 @@
   <run_depend>std_msgs</run_depend>
   <run_depend>std_srvs</run_depend>
   <run_depend>message_runtime</run_depend>
+  <run_depend>rosthrottle</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>rosgraph</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
 
   <export>
     <!--<metapackage/> -->
