@@ -7,12 +7,11 @@ Created on Tue Feb 25 08:55:41 2020
 ##########################################################################################
 from __future__ import division
 from threading import Thread, Event
-from rosthrottle import MessageThrottle
 from cv2 import imread
 
 import rospy, rostopic, tf
 import numpy as np, math
-import yaml, os
+import yaml, os, subprocess
 
 
 class bcolors:
@@ -49,7 +48,7 @@ class TopicMapper(Thread):
         
         self.init_map()
         
-        self.stat = self.get_stat()
+        self.stat = self.set_stat()
         
         self._stop_event = Event()
 
@@ -71,6 +70,8 @@ class TopicMapper(Thread):
             self.x_min, self.x_max = self.config["limits"][:2]
             self.y_min, self.y_max = self.config["limits"][2:]
             
+        self.config["limits"] = [self.x_min, self.x_max, self.y_min, self.y_max]
+            
         if "map" not in self.config and "limits" not in self.config:
             rospy.logerr("No topic map limits specified")
             exit()
@@ -81,17 +82,13 @@ class TopicMapper(Thread):
         self.obs = np.zeros((self.nx, self.ny))
         self.map = np.zeros((self.nx, self.ny))  
         self.map[:] = np.nan
-
-        self.index = [np.nan, np.nan]        
-        self.position = [np.nan, np.nan]
-        self.arg_at_position = np.nan
         
         if self.config["stat"] == "std":
             self.wma = np.zeros((self.nx, self.ny))
             self.wma[:] = np.nan
             
             
-    def get_stat(self):
+    def set_stat(self):
         
         if self.config["stat"] == "mean":
             stat = self._mean
@@ -166,9 +163,11 @@ class TopicMapper(Thread):
             rate = self.config["rate"]
             
         if rate > 0:
+            COMMAND_BASE = ["rosrun", "topic_tools", "throttle"]
             subscribed_topic = "/sentor/mapping/" + str(self.thread_num) + real_topic
-            bt = MessageThrottle(real_topic, subscribed_topic, rate)
-            bt.start()
+            
+            command = COMMAND_BASE + ["messages", real_topic, str(rate), subscribed_topic]
+            subprocess.Popen(command, stdout=open(os.devnull, "wb"))
         else:
             subscribed_topic = real_topic
             
@@ -234,12 +233,9 @@ class TopicMapper(Thread):
         
         z = self.map[ix, iy]
         if np.isnan(z): z=0
+        
         z = self.stat(z, N)
-            
         self.map[ix, iy] = z        
-        self.index = [ix, iy]
-        self.position = [x, y]
-        self.arg_at_position = z
         
                         
     def stop_mapping(self):

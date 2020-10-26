@@ -5,7 +5,6 @@
 ##########################################################################################
 from sentor.TopicMapper import TopicMapper
 from sentor.TopicMapServer import TopicMapServer
-from std_srvs.srv import Empty, EmptyResponse
 
 import signal
 import rospy

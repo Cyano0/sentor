@@ -155,9 +155,7 @@ class TopicMapServer(object):
                 map_msg.stat = mapper.config["stat"]
                 map_msg.resolution = mapper.config["resolution"]
                 map_msg.shape = mapper.shape
-                map_msg.index = mapper.index
-                map_msg.position = mapper.position
-                map_msg.arg_at_position = mapper.arg_at_position
+                map_msg.limits = mapper.config["limits"]
     
                 topic_map = np.ndarray.tolist(np.ravel(mapper.map))
                 map_msg.topic_map = topic_map
