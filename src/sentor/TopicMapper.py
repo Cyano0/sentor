@@ -7,12 +7,11 @@ Created on Tue Feb 25 08:55:41 2020
 ##########################################################################################
 from __future__ import division
 from threading import Thread, Event
-from rosthrottle import MessageThrottle
 from cv2 import imread
 
 import rospy, rostopic, tf
 import numpy as np, math
-import yaml, os
+import yaml, os, subprocess
 
 
 class bcolors:
@@ -164,9 +163,11 @@ class TopicMapper(Thread):
             rate = self.config["rate"]
             
         if rate > 0:
+            COMMAND_BASE = ["rosrun", "topic_tools", "throttle"]
             subscribed_topic = "/sentor/mapping/" + str(self.thread_num) + real_topic
-            bt = MessageThrottle(real_topic, subscribed_topic, rate)
-            bt.start()
+            
+            command = COMMAND_BASE + ["messages", real_topic, str(rate), subscribed_topic]
+            subprocess.Popen(command, stdout=open(os.devnull, "wb"))
         else:
             subscribed_topic = real_topic
             
