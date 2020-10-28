@@ -113,35 +113,39 @@ if __name__ == "__main__":
 
     topic_monitors = []
     print "Monitoring topics:"
-    for topic in topics:
+    for i, topic in enumerate(topics):
         try:
             topic_name = topic["name"]
         except Exception as e:
             rospy.logerr("topic name is not specified for entry %s" % topic)
             continue
 
+        rate = 0
         signal_when = {}
         signal_lambdas = []
         processes = []
         timeout = 0
         default_notifications = True
         include = True
-        if 'signal_when' in topic.keys():
+        
+        if 'rate' in topic:
+            rate = topic['rate']
+        if 'signal_when' in topic:
             signal_when = topic['signal_when']
-        if 'signal_lambdas' in topic.keys():
+        if 'signal_lambdas' in topic:
             signal_lambdas = topic['signal_lambdas']
-        if 'execute' in topic.keys():
+        if 'execute' in topic:
             processes = topic['execute']
-        if 'timeout' in topic.keys():
+        if 'timeout' in topic:
             timeout = topic['timeout']
-        if 'default_notifications' in topic.keys():
+        if 'default_notifications' in topic:
             default_notifications = topic['default_notifications']
-        if 'include' in topic.keys():
+        if 'include' in topic:
             include = topic['include']
 
         if include:
-            topic_monitor = TopicMonitor(topic_name, signal_when, signal_lambdas, processes, 
-                                         timeout, default_notifications, event_callback)
+            topic_monitor = TopicMonitor(topic_name, rate, signal_when, signal_lambdas, processes, 
+                                         timeout, default_notifications, event_callback, i)
 
             topic_monitors.append(topic_monitor)
             safety_monitor.register_monitors(topic_monitor)
