@@ -8,7 +8,6 @@ from sentor.ROSTopicHz import ROSTopicHz
 from sentor.ROSTopicFilter import ROSTopicFilter
 from sentor.ROSTopicPub import ROSTopicPub
 from sentor.Executor import Executor
-from sentor.TopicMapper import TopicMapper
 
 from threading import Thread, Event, Lock
 import socket
@@ -16,6 +15,8 @@ import rostopic
 import rosgraph
 import rospy
 import time
+import subprocess
+import os
 
 class bcolors:
     HEADER = '\033[95m'
@@ -33,11 +34,12 @@ class bcolors:
 class TopicMonitor(Thread):
 
 
-    def __init__(self, topic_name, signal_when_config, signal_lambdas_config, processes, 
-                 timeout, default_notifications, event_callback):
+    def __init__(self, topic_name, rate, signal_when_config, signal_lambdas_config, processes, 
+                 timeout, default_notifications, event_callback, thread_num):
         Thread.__init__(self)
 
         self.topic_name = topic_name
+        self.rate = rate
         self.signal_when_config = signal_when_config
         self.signal_lambdas_config = signal_lambdas_config
         self.processes = processes
@@ -47,6 +49,7 @@ class TopicMonitor(Thread):
             self.timeout = 0.1
         self.default_notifications = default_notifications
         self._event_callback = event_callback
+        self.thread_num = thread_num
         self.nodes = []
         
         self._stop_event = Event()
@@ -86,6 +89,16 @@ class TopicMonitor(Thread):
             if self.signal_when.lower() == 'not published' and self.safety_critical:
                 self.signal_when_is_safe = False
             return False
+        
+        # if rate > 0 set in config then throttle topic at that rate
+        if self.rate > 0:
+            COMMAND_BASE = ["rosrun", "topic_tools", "throttle"]
+            subscribed_topic = "/sentor/monitoring/" + str(self.thread_num) + real_topic
+            
+            command = COMMAND_BASE + ["messages", real_topic, str(self.rate), subscribed_topic]
+            subprocess.Popen(command, stdout=open(os.devnull, "wb"))
+        else:
+            subscribed_topic = real_topic
 
         # find out topic publishing nodes
         master = rosgraph.Master(rospy.get_name())
@@ -110,11 +123,11 @@ class TopicMonitor(Thread):
                      hz_monitor_required = True
         
         if hz_monitor_required:
-            self.hz_monitor = self._instantiate_hz_monitor(real_topic, self.topic_name, msg_class)
+            self.hz_monitor = self._instantiate_hz_monitor(subscribed_topic, self.topic_name, msg_class)
 
         if self.signal_when.lower() == 'published':
             print "Signaling 'published' for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
-            self.pub_monitor = self._instantiate_pub_monitor(real_topic, self.topic_name, msg_class)
+            self.pub_monitor = self._instantiate_pub_monitor(subscribed_topic, self.topic_name, msg_class)
             self.pub_monitor.register_published_cb(self.published_cb)
             
             if self.safety_critical:
@@ -134,7 +147,7 @@ class TopicMonitor(Thread):
                 
                 if lambda_fn_str != "":
                     print "\t" + bcolors.OKGREEN + lambda_fn_str + bcolors.ENDC + " ("+ bcolors.BOLD+"timeout: %s seconds" %  lambda_config["timeout"] + bcolors.ENDC +")"
-                    lambda_monitor = self._instantiate_lambda_monitor(real_topic, msg_class, lambda_fn_str, lambda_config)
+                    lambda_monitor = self._instantiate_lambda_monitor(subscribed_topic, msg_class, lambda_fn_str, lambda_config)
 
                     # register cb that notifies when the lambda function is True
                     lambda_monitor.register_satisfied_cb(self.lambda_satisfied_cb)
@@ -214,26 +227,26 @@ class TopicMonitor(Thread):
         return lambda_config
         
 
-    def _instantiate_hz_monitor(self, real_topic, topic_name, msg_class):
+    def _instantiate_hz_monitor(self, subscribed_topic, topic_name, msg_class):
         hz = ROSTopicHz(topic_name, 1000)
 
-        rospy.Subscriber(real_topic, msg_class, hz.callback_hz)
+        rospy.Subscriber(subscribed_topic, msg_class, hz.callback_hz)
 
         return hz
         
 
-    def _instantiate_pub_monitor(self, real_topic, topic_name, msg_class):
+    def _instantiate_pub_monitor(self, subscribed_topic, topic_name, msg_class):
         pub = ROSTopicPub(topic_name)
 
-        rospy.Subscriber(real_topic, msg_class, pub.callback_pub)
+        rospy.Subscriber(subscribed_topic, msg_class, pub.callback_pub)
 
         return pub
         
 
-    def _instantiate_lambda_monitor(self, real_topic, msg_class, lambda_fn_str, lambda_config):
+    def _instantiate_lambda_monitor(self, subscribed_topic, msg_class, lambda_fn_str, lambda_config):
         filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config)
 
-        rospy.Subscriber(real_topic, msg_class, filter.callback_filter)
+        rospy.Subscriber(subscribed_topic, msg_class, filter.callback_filter)
 
         return filter
         

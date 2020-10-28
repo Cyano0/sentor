@@ -1,4 +1,5 @@
 - name : "/expr_1"
+  rate: 5.0
   signal_when:
     condition: "not published"
     timeout: 1.0

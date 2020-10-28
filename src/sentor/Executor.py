@@ -7,6 +7,7 @@ Created on Thu Nov 21 10:30:22 2019
 #####################################################################################
 import rospy, rosservice, rostopic, actionlib, subprocess
 import dynamic_reconfigure.client
+import os, numpy, math
 from threading import Lock
 
 
@@ -68,6 +69,8 @@ class Executor(object):
         
         try:
             service_name = process["call"]["service_name"]
+            service_name = self.get_name(service_name)
+                    
             service_class = rosservice.get_service_class_by_name(service_name)
             
             if "timeout" in process["call"]:
@@ -101,6 +104,7 @@ class Executor(object):
         
         try:
             topic_name = process["publish"]["topic_name"]
+            topic_name = self.get_name(topic_name)
             
             if "topic_latched" in process["publish"]:
                 topic_latched = process["publish"]["topic_latched"]
@@ -241,7 +245,7 @@ class Executor(object):
             d = {}
             d["name"] = "reconf"
             d["verbose"] = self.is_verbose(process["reconf"])
-            d["def_msg"] = ("Reconfiguring parameters {}".format(process["reconf"]["params"]), "info", "")
+            d["def_msg"] = ("Reconfiguring parameters: {}".format(process["reconf"]["params"]), "info", "")
             d["func"] = "self.reconf(**kwargs)"
             d["kwargs"] = {}
             d["kwargs"]["params"] = process["reconf"]["params"]
@@ -317,14 +321,26 @@ class Executor(object):
         except Exception as e:
             self.event_cb(self.init_err_str.format("custom", str(e)), "warn")
             self.processes.append("not_initialised")
+
         
+    def get_name(self, name):
+        
+        env_name = os.environ.get(name)
+        if env_name is not None:
+            name = env_name
+            
+        if rospy.has_param(name):
+            name = rospy.get_param(name)
+            
+        return name
+
         
     def is_verbose(self, process):
         
         if "verbose" in process:
             verbose = process["verbose"]
         else:
-            verbose = True
+            verbose = False
             
         return verbose
             
@@ -406,7 +422,6 @@ class Executor(object):
         msg = self.msg
         if msg is not None and msg_args is not None:
             args = [eval(arg) for arg in msg_args]
-            args = tuple(args)
             self.event_cb("CUSTOM MSG: " + message.format(*args), level)
         else:
             self.event_cb("CUSTOM MSG: " + message, level)
@@ -428,11 +443,7 @@ class Executor(object):
         
         
     def custom(self, cp, args):
-        
-        if args is not None:
-            cp.run(*args)
-        else:
-            cp.run()
+        cp.run(*args) if args is not None else cp.run()
          
         
     def goal_cb(self, status, result):
