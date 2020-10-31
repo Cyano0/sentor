@@ -38,6 +38,7 @@ class TopicMapper(Thread):
         self.topic_name = config["name"]
         
         self.set_limits()
+        self.config["limits"] = [self.x_min, self.x_max, self.y_min, self.y_max]
         
         self.x_bins = np.arange(self.x_min, self.x_max, config["resolution"])
         self.y_bins = np.arange(self.y_min, self.y_max, config["resolution"])
@@ -69,8 +70,6 @@ class TopicMapper(Thread):
         if "limits" in self.config:
             self.x_min, self.x_max = self.config["limits"][:2]
             self.y_min, self.y_max = self.config["limits"][2:]
-            
-        self.config["limits"] = [self.x_min, self.x_max, self.y_min, self.y_max]
             
         if "map" not in self.config and "limits" not in self.config:
             rospy.logerr("No topic map limits specified")
