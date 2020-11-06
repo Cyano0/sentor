@@ -14,6 +14,9 @@ add_message_files(
   TopicMap.msg
   TopicMapArray.msg
   SentorEvent.msg
+  Monitor.msg
+  MonitorArray.msg
+  ErrorCode.msg
 )
 
 add_service_files(

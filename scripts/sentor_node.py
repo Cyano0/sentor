@@ -7,6 +7,7 @@
 from __future__ import division
 from sentor.TopicMonitor import TopicMonitor
 from sentor.SafetyMonitor import SafetyMonitor
+from sentor.MultiMonitor import MultiMonitor
 from std_msgs.msg import String
 from sentor.msg import SentorEvent
 from std_srvs.srv import Empty, EmptyResponse
@@ -33,6 +34,8 @@ def __signal_handler(signum, frame):
     def kill_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.kill_monitor()
+        safety_monitor.stop_monitor()
+        multi_monitor.stop_monitor
     def join_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.join()
@@ -45,19 +48,21 @@ def __signal_handler(signum, frame):
 def stop_monitoring(_):
     for topic_monitor in topic_monitors:
         topic_monitor.stop_monitor()
-            
+        
     safety_monitor.stop_monitor()
+    multi_monitor.stop_monitor
 
     rospy.logwarn("sentor_node stopped monitoring")
     ans = EmptyResponse()
     return ans
     
 
-def start_monitoring(_):
+def start_monitoring(_):    
     for topic_monitor in topic_monitors:
         topic_monitor.start_monitor()
-            
+
     safety_monitor.start_monitor()
+    multi_monitor.start_monitor()
 
     rospy.logwarn("sentor_node started monitoring")
     ans = EmptyResponse()
@@ -83,7 +88,6 @@ def event_callback(string, type, msg="", nodes=[], topic=""):
         event.nodes = nodes
         event.topic = topic
         rich_event_pub.publish(event)
-
 ##########################################################################################
     
 
@@ -109,7 +113,9 @@ if __name__ == "__main__":
     safe_operation_timeout = rospy.get_param("~safe_operation_timeout", 10.0)    
     safety_pub_rate = rospy.get_param("~safety_pub_rate", 10.0)    
     auto_safety_tagging = rospy.get_param("~auto_safety_tagging", True)        
-    safety_monitor = SafetyMonitor(safe_operation_timeout, safety_pub_rate, auto_safety_tagging, event_callback)   
+    safety_monitor = SafetyMonitor(safe_operation_timeout, safety_pub_rate, auto_safety_tagging, event_callback) 
+    
+    multi_monitor = MultiMonitor()
 
     topic_monitors = []
     print "Monitoring topics:"
@@ -149,6 +155,7 @@ if __name__ == "__main__":
 
             topic_monitors.append(topic_monitor)
             safety_monitor.register_monitors(topic_monitor)
+            multi_monitor.register_monitors(topic_monitor)
             
     time.sleep(1)
 
