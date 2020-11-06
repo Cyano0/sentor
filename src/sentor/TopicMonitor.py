@@ -51,6 +51,7 @@ class TopicMonitor(Thread):
         self._event_callback = event_callback
         self.thread_num = thread_num
         self.nodes = []
+        self.crit_conditions = {}
         
         self._stop_event = Event()
         self._killed_event = Event()
@@ -193,6 +194,10 @@ class TopicMonitor(Thread):
             
         if self.signal_when_timeout <= 0:
             self.signal_when_timeout = 0.1
+        
+        # for publishing list of safety critical conditions
+        if self.safety_critical:
+            self.crit_conditions[self.signal_when] = True
             
         
     def process_lambda_config(self, signal_lambda):
@@ -223,6 +228,10 @@ class TopicMonitor(Thread):
             
         if lambda_config["timeout"] <= 0:
             lambda_config["timeout"] = 0.1
+        
+        # for publishing list of safety critical conditions
+        if lambda_config["safety_critical"]:
+            self.crit_conditions[lambda_config["expr"]] = True
             
         return lambda_config
         
@@ -264,6 +273,7 @@ class TopicMonitor(Thread):
             if self.signal_when.lower() == 'not published':
                 if self.safety_critical:
                     self.signal_when_is_safe = False
+                    self.crit_conditions[self.signal_when] = False
                 if self.signal_when_def_nots and self.safety_critical:
                     self.event_callback("SAFETY CRITICAL: Topic %s is not published anymore" % self.topic_name, "error")
                 elif self.signal_when_def_nots:
@@ -299,6 +309,7 @@ class TopicMonitor(Thread):
                         
                         if self.safety_critical:
                             self.signal_when_is_safe = True
+                            self.crit_conditions[self.signal_when] = True
     
                         if timer is not None:
                             timer.shutdown()
@@ -332,6 +343,7 @@ class TopicMonitor(Thread):
                         if config["safety_critical"]:
                             self.lambdas_are_safe = False
                             self.sat_crit_expressions.append(config["expr"])
+                            self.crit_conditions[config["expr"]] = False
                         
                         if config["default_notifications"]:
                             if config["safety_critical"]:
@@ -370,6 +382,7 @@ class TopicMonitor(Thread):
                 
             if expr in self.sat_crit_expressions:
                 self.sat_crit_expressions.remove(expr)
+                self.crit_conditions[expr] = True
                 
             if not self.sat_crit_expressions:
                 self.lambdas_are_safe = True
@@ -379,6 +392,7 @@ class TopicMonitor(Thread):
         if not self._stop_event.isSet():
             if self.safety_critical:
                 self.signal_when_is_safe = False
+                self.crit_conditions[self.signal_when] = False
             if self.default_notifications and self.safety_critical:
                 self.event_callback("SAFETY CRITICAL: Topic %s is published " % (self.topic_name), "error")
             elif self.default_notifications:
