@@ -39,12 +39,10 @@ class MultiMonitor(object):
             if error_code_new != self.error_code:
                 self.error_code = error_code_new
                 
-                rostime = rospy.Time.now()
                 conditions = MonitorArray()
-                conditions.header.stamp = rostime
+                conditions.header.stamp = rospy.Time.now()
                 
                 error_code = ErrorCode()
-                error_code.header.stamp = rostime
                 error_code.error_code = map(int,self.error_code)
 
                 count = 0                
