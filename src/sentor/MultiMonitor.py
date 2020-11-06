@@ -7,7 +7,7 @@ Created on Fri Dec  6 08:51:15 2019
 #####################################################################################
 from __future__ import division
 import rospy
-from sentor.msg import Monitor, MonitorArray
+from sentor.msg import Monitor, MonitorArray, ErrorCode
 from threading import Event
 
 
@@ -17,10 +17,12 @@ class MultiMonitor(object):
     def __init__(self, rate=10):
         
         self.topic_monitors = []
-        self.conditions = MonitorArray()
         self._stop_event = Event()
+        self.error_code = []
         
-        self.pub = rospy.Publisher("/sentor/monitors", MonitorArray, latch=True, queue_size=1)
+        self.monitors_pub = rospy.Publisher("/sentor/monitors", MonitorArray, latch=True, queue_size=1)
+        self.error_code_pub = rospy.Publisher("/sentor/error_code", ErrorCode, latch=True, queue_size=1)
+        
         rospy.Timer(rospy.Duration(1.0/rate), self.cb)
 
 
@@ -31,22 +33,33 @@ class MultiMonitor(object):
     def cb(self, event=None):
         
         if not self._stop_event.isSet():
-
-            conditions_new = MonitorArray()
-            conditions_new.header.stamp = rospy.Time.now()
             
-            for monitor in self.topic_monitors:
-                for expr in monitor.crit_conditions:
-                    condition = Monitor()
-                    condition.topic = monitor.topic_name
-                    condition.expression = expr
-                    condition.safe = monitor.crit_conditions[expr]
-                    conditions_new.monitors.append(condition)
-
-            if self.conditions.monitors != conditions_new.monitors:
-                self.conditions = conditions_new
-                self.pub.publish(self.conditions)
+            error_code_new = [monitor.crit_conditions[expr] for monitor in self.topic_monitors for expr in monitor.crit_conditions]
+            
+            if error_code_new != self.error_code:
+                self.error_code = error_code_new
                 
+                rostime = rospy.Time.now()
+                conditions = MonitorArray()
+                conditions.header.stamp = rostime
+                
+                error_code = ErrorCode()
+                error_code.header.stamp = rostime
+                error_code.error_code = map(int,self.error_code)
+
+                count = 0                
+                for monitor in self.topic_monitors:
+                    for expr in monitor.crit_conditions:
+                        condition = Monitor()
+                        condition.topic = monitor.topic_name
+                        condition.expression = expr
+                        condition.safe = self.error_code[count]
+                        conditions.monitors.append(condition)
+                        count+=1
+                        
+                self.monitors_pub.publish(conditions)
+                self.error_code_pub.publish(error_code)
+                        
                 
     def stop_monitor(self):
         self._stop_event.set()
