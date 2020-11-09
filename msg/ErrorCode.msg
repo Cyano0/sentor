@@ -1,1 +1,1 @@
-uint8[] error_code
+uint16[] error_code
