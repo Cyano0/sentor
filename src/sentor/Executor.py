@@ -337,10 +337,9 @@ class Executor(object):
         
     def is_verbose(self, process):
         
+        verbose = False
         if "verbose" in process:
             verbose = process["verbose"]
-        else:
-            verbose = False
             
         return verbose
             
