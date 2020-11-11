@@ -35,7 +35,7 @@ def __signal_handler(signum, frame):
         for topic_monitor in topic_monitors:
             topic_monitor.kill_monitor()
         safety_monitor.stop_monitor()
-        multi_monitor.stop_monitor
+        multi_monitor.stop_monitor()
     def join_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.join()
@@ -50,7 +50,7 @@ def stop_monitoring(_):
         topic_monitor.stop_monitor()
         
     safety_monitor.stop_monitor()
-    multi_monitor.stop_monitor
+    multi_monitor.stop_monitor()
 
     rospy.logwarn("sentor_node stopped monitoring")
     ans = EmptyResponse()
