@@ -7,7 +7,7 @@ Created on Fri Dec  6 08:51:15 2019
 #####################################################################################
 from __future__ import division
 import rospy
-from sentor.msg import Monitor, MonitorArray
+from sentor.msg import Monitor, MonitorArray, ErrorCode
 from threading import Event
 
 
@@ -21,6 +21,7 @@ class MultiMonitor(object):
         self.error_code = []
         
         self.monitors_pub = rospy.Publisher("/sentor/monitors", MonitorArray, latch=True, queue_size=1)
+        self.error_code_pub = rospy.Publisher("/sentor/error_code", ErrorCode, latch=True, queue_size=1)
         
         rospy.Timer(rospy.Duration(1.0/rate), self.cb)
 
@@ -41,6 +42,9 @@ class MultiMonitor(object):
                 conditions = MonitorArray()
                 conditions.header.stamp = rospy.Time.now()
                 
+                error_code = ErrorCode()
+                error_code.error_code = map(int,self.error_code)
+
                 count = 0                
                 for monitor in self.topic_monitors:
                     topic_name = monitor.topic_name
@@ -55,6 +59,7 @@ class MultiMonitor(object):
                         count+=1
                         
                 self.monitors_pub.publish(conditions)
+                self.error_code_pub.publish(error_code)
                         
                 
     def stop_monitor(self):

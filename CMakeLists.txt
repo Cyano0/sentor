@@ -16,6 +16,7 @@ add_message_files(
   SentorEvent.msg
   Monitor.msg
   MonitorArray.msg
+  ErrorCode.msg
 )
 
 add_service_files(
