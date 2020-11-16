@@ -7,21 +7,24 @@
     default_notifications: True
     process_indices: [4]
     repeat_exec: True
+    tags: ["expression 1 is not published"]
   signal_lambdas:
   - expression: "lambda msg : msg.data == True"
     timeout: 0.1
-    safety_critical: False
+    safety_critical: True
     default_notifications: True
     when_published: False
-    process_indices: [0,1,5]
+    process_indices: [0,1]
     repeat_exec: False
+    tags: ["expression 1 is True"]
   - expression: "lambda msg : msg.data == False"
     timeout: 5.0
     safety_critical: True
     default_notifications: True
     when_published: False
-    process_indices: [2,3,5]
+    process_indices: [2,3]
     repeat_exec: False
+    tags: ["expression 1 is False"]
   execute:
   - log:
       message: "expression 1 is True"
@@ -38,13 +41,13 @@
   - log:
       message: "expression 1 is not published"
       level: "warn"
-  - custom:
-      package: "rasberry_uv"
-      name: myClass
-      init_args:
-      - "Hello"
-      run_args:
-      - "World"
+#  - custom:
+#      package: "rasberry_uv"
+#      name: myClass
+#      init_args:
+#      - "Hello"
+#      run_args:
+#      - "World"
   timeout: 0.1
   default_notifications: True
   include: True

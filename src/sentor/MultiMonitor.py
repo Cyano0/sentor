@@ -7,7 +7,7 @@ Created on Fri Dec  6 08:51:15 2019
 #####################################################################################
 from __future__ import division
 import rospy
-from sentor.msg import Monitor, MonitorArray, ErrorCode
+from sentor.msg import Monitor, MonitorArray
 from threading import Event
 
 
@@ -21,7 +21,6 @@ class MultiMonitor(object):
         self.error_code = []
         
         self.monitors_pub = rospy.Publisher("/sentor/monitors", MonitorArray, latch=True, queue_size=1)
-        self.error_code_pub = rospy.Publisher("/sentor/error_code", ErrorCode, latch=True, queue_size=1)
         
         rospy.Timer(rospy.Duration(1.0/rate), self.cb)
 
@@ -34,7 +33,7 @@ class MultiMonitor(object):
         
         if not self._stop_event.isSet():
             
-            error_code_new = [monitor.crit_conditions[expr] for monitor in self.topic_monitors for expr in monitor.crit_conditions]
+            error_code_new = [monitor.crit_conditions[expr]["safe"] for monitor in self.topic_monitors for expr in monitor.crit_conditions]
             
             if error_code_new != self.error_code:
                 self.error_code = error_code_new
@@ -42,21 +41,20 @@ class MultiMonitor(object):
                 conditions = MonitorArray()
                 conditions.header.stamp = rospy.Time.now()
                 
-                error_code = ErrorCode()
-                error_code.error_code = map(int,self.error_code)
-
                 count = 0                
                 for monitor in self.topic_monitors:
+                    topic_name = monitor.topic_name
+                    
                     for expr in monitor.crit_conditions:
                         condition = Monitor()
-                        condition.topic = monitor.topic_name
+                        condition.topic = topic_name
                         condition.expression = expr
                         condition.safe = self.error_code[count]
+                        condition.tags = monitor.crit_conditions[expr]["tags"]
                         conditions.monitors.append(condition)
                         count+=1
                         
                 self.monitors_pub.publish(conditions)
-                self.error_code_pub.publish(error_code)
                         
                 
     def stop_monitor(self):
