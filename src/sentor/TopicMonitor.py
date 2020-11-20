@@ -210,6 +210,8 @@ class TopicMonitor(Thread):
 
         lambda_config = {}
         lambda_config["expr"] = ""
+        lambda_config["file"] = None
+        lambda_config["package"] = None
         lambda_config["timeout"] = self.timeout
         lambda_config["safety_critical"] = False
         lambda_config["default_notifications"] = self.default_notifications
@@ -220,6 +222,10 @@ class TopicMonitor(Thread):
         
         if "expression" in signal_lambda:
             lambda_config["expr"] = signal_lambda["expression"]
+        if "file" in signal_lambda:
+            lambda_config["file"] = signal_lambda["file"]
+        if "package" in signal_lambda:
+            lambda_config["package"] = signal_lambda["package"]
         if "timeout" in signal_lambda:
             lambda_config["timeout"] = signal_lambda["timeout"]
         if "safety_critical" in signal_lambda:

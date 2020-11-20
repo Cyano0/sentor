@@ -9,9 +9,12 @@
     repeat_exec: True
     tags: ["expression 1 is not published"]
   signal_lambdas:
-  - expression: "lambda msg : msg.data == True"
+#  - expression: "lambda msg : msg.data == True"
+  - expression: CustomLambda
+    file: CustomLambdaExample
+    package: sentor
     timeout: 0.1
-    safety_critical: True
+    safety_critical: False
     default_notifications: True
     when_published: False
     process_indices: [0,1]

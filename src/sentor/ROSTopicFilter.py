@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """
 @author: Francesco Del Duchetto (FDelDuchetto@lincoln.ac.uk)
-
+@author: Adam Binch (abinch@sagarobotics.com)
 """
 #####################################################################################
 from __future__ import division
 import rospy, math, numpy
-# imported the package `math` so that it can be used in the lambda expressions
+# imported the packages math and numpy so that they can be used in the lambda expressions
 
 class ROSTopicFilter(object):
 
@@ -14,9 +14,14 @@ class ROSTopicFilter(object):
         self.topic_name = topic_name
         self.lambda_fn_str = lambda_fn_str
         self.config = config
+        
         self.lambda_fn = None
         try:
-            self.lambda_fn = eval(self.lambda_fn_str)
+            if config["file"] is not None and config["package"] is not None:
+                exec("from {}.{} import {} as lambda_fn".format(config["package"], config["file"], self.lambda_fn_str))
+                self.lambda_fn = lambda_fn
+            else:
+                self.lambda_fn = eval(self.lambda_fn_str)
         except Exception as e:
             rospy.logerr("Error evaluating lambda function %s : %s" % (self.lambda_fn_str, e))
 
