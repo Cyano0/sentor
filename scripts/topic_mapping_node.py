@@ -17,6 +17,7 @@ def __signal_handler(signum, frame):
     def kill_mappers():
         for topic_mapper in topic_mappers:
             topic_mapper.stop_mapping()
+        topic_map_server.stop()
     def join_mappers():
         for topic_mapper in topic_mappers:
             topic_mapper.join()

@@ -295,7 +295,11 @@ class Executor(object):
             package = process["custom"]["package"]
             name = process["custom"]["name"]
             
-            exec("from {}.{} import {} as custom_proc".format(package, name, name))
+            _file = name
+            if "file" in process["custom"]:
+                _file = process["custom"]["file"]
+            
+            exec("from {}.{} import {} as custom_proc".format(package, _file, name))
             
             if "init_args" in process["custom"]:
                 args = process["custom"]["init_args"] 

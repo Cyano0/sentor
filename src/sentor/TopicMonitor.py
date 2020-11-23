@@ -50,17 +50,19 @@ class TopicMonitor(Thread):
         self.default_notifications = default_notifications
         self._event_callback = event_callback
         self.thread_num = thread_num
+        
         self.nodes = []
+        self.sat_crit_expressions = []
+        self.sat_expressions_timer = {}
+        self.sat_expr_repeat_timer = {}
         self.crit_conditions = {}
+        
+        self.process_signal_config()
         
         self._stop_event = Event()
         self._killed_event = Event()
         self._lock = Lock()
-
-        self.process_signal_config()        
-        self.sat_crit_expressions = []
-        self.sat_expressions_timer = {}
-        self.sat_expr_repeat_timer = {}
+        
         self.pub_monitor = None
         self.hz_monitor = None
         self.is_topic_published = True 
@@ -345,12 +347,10 @@ class TopicMonitor(Thread):
     def lambda_satisfied_cb(self, expr, msg, config):
         
         def ProcessLambda(timer_dict):
-            
             process_lambda = True
             if config["when_published"] and not self.is_topic_published:
                 process_lambda = False
                 timer_dict = self.kill_timer(timer_dict, config["expr"]) 
-                
             return process_lambda, timer_dict
             
         if not self._stop_event.isSet():    

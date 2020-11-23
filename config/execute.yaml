@@ -1,24 +1,25 @@
 # SEE THE README.MD FOR ARGUMENT DESCRIPTIONS
 
-  
 - name: "/topological_navigation/feedback"
-#  signal_when: 
-#    condition: "not published"
-#    timeout: 0.0
-#    safety_critical: False
-#    default_notifications: True
-#    process_indices: []
-#    repeat_exec: False
+#  rate: 0
   signal_lambdas:
   - expression: "lambda msg: msg.feedback.route == 't1-r1-c1'"
-    timeout: 0.0
     safety_critical: True
     default_notifications: True
     when_published: False
-#    process_indices: [0,1,2,3,4,5,6]
+    process_indices: [0,1,2,3,4,5]
     repeat_exec: False
+    tags: ["navigation"]
+  - expression: CustomLambda
+    file: CustomLambdaExample
+    package: sentor
+    safety_critical: False
+    default_notifications: True
+    when_published: False
+    process_indices: [6,7,8,9,10,11,12,13]
+    repeat_exec: False
+    tags: ["navigation"]
   execute:
-  - lock_acquire:
   - log:
       message: "Navigating away from {}"
       level: warn
@@ -46,29 +47,15 @@
       cmd_args:
       - "cowsay"
       - "moo"
-  - lock_release:
-  timeout: 0.0
-  default_notifications: True
-  include: True                  
-
-
-- name: "/topological_navigation/feedback"
-#  signal_when:
-#    condition: "not published"
-#    timeout: 0.0
-#    safety_critical: False
-#    default_notifications: True
-#    process_indices: []
-#    repeat_exec: False
-  signal_lambdas:
-  - expression: "lambda msg: msg.feedback.route == 't1-r1-c2'"
-    timeout: 0.0
-    safety_critical: False
-    default_notifications: True
-    when_published: False
-#    process_indices: [0,1,2,3,4,5,6,7]
-    repeat_exec: False
-  execute:
+  - custom:
+      verbose: True
+      name: CustomProcess
+      file: CustomProcessExample
+      package: sentor
+      init_args: 
+      - "sentor custom process says 'Hello World!' at initialisation"
+      run_args: 
+      - "sentor custom process says 'Hello World!' at runtime"
   - reconf:
       verbose: True
       params:
@@ -111,13 +98,30 @@
       -  "msg.pose.pose.position.x = 18.0"
       -  "msg.pose.pose.position.y = -7.0"
       -  "msg.pose.pose.orientation.w = 1.0"
-  timeout: 0.0
-  default_notifications: True
-  include: True   
+  timeout: 0.1
+  include: True                  
 
 
-- name : '/row_detector/path_error'
-  signal_lambdas :
-  - expression: "lambda msg : math.isnan(msg.y)"
+- name: "/gps/fix"
+  signal_when:
+    condition: "not published"
+    safety_critical: True
+    timeout: 3.0
+    process_indices: [0]
+    tags: ["GPS", "400"]
+  signal_lambdas:
+    - expression: "lambda msg : msg.status.status < 2"
+      timeout: 10.0
+      safety_critical: True
+      process_indices: [1]
+      tags: ["GPS", "401"]
+  execute:
+  - log:
+      message: "GPS data not seen for 3 seconds!"
+      level: error
+  - log:
+      message: "GPS status < 2 for 10 seconds. Lost corrections."
+      level: error
+  default_notifications: False
   include: False 
 
