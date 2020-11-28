@@ -60,7 +60,7 @@ class SafetyMonitor(object):
 
                     self.safe_operation = False                        
                     if not self.unsafe_msg_sent:
-                        self.event_cb("SAFE OPERATION: FALSE", "warn")
+                        self.event_cb("SAFE OPERATION: FALSE", "error")
                         self.safe_msg_sent = False
                         self.unsafe_msg_sent = True
                         

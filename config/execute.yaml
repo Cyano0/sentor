@@ -1,24 +1,23 @@
 # SEE THE README.MD FOR ARGUMENT DESCRIPTIONS
 
 - name: "/topological_navigation/feedback"
-#  rate: 0
   signal_lambdas:
   - expression: "lambda msg: msg.feedback.route == 't1-r1-c1'"
     safety_critical: True
     default_notifications: True
-    when_published: False
     process_indices: [0,1,2,3,4,5]
     repeat_exec: False
     tags: ["navigation"]
+    when_published: False
   - expression: CustomLambda
     file: CustomLambdaExample
     package: sentor
     safety_critical: False
     default_notifications: True
-    when_published: False
     process_indices: [6,7,8,9,10,11,12,13]
     repeat_exec: False
     tags: ["navigation"]
+    when_published: False
   execute:
   - log:
       message: "Navigating away from {}"
@@ -53,9 +52,9 @@
       file: CustomProcessExample
       package: sentor
       init_args: 
-      - "sentor custom process says 'Hello World!' at initialisation"
+      - "sentor custom process says Hello World! at initialisation"
       run_args: 
-      - "sentor custom process says 'Hello World!' at runtime"
+      - "sentor custom process says Hello World! at runtime"
   - reconf:
       verbose: True
       params:
@@ -105,8 +104,8 @@
 - name: "/gps/fix"
   signal_when:
     condition: "not published"
-    safety_critical: True
     timeout: 3.0
+    safety_critical: True
     process_indices: [0]
     tags: ["GPS", "400"]
   signal_lambdas:

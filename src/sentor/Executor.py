@@ -144,7 +144,7 @@ class Executor(object):
             exec("from {}.msg import {} as action_spec".format(package, spec))
             exec("from {}.msg import {} as goal_class".format(package, spec[:-6] + "Goal"))
             
-            rospy.sleep(0.5)
+            rospy.sleep(1.0)
             
             action_client = actionlib.SimpleActionClient(namespace, action_spec)
             wait = action_client.wait_for_server(rospy.Duration(5.0))
@@ -433,7 +433,7 @@ class Executor(object):
     def reconf(self, params):
         
         for param in params:
-            rcnfclient = dynamic_reconfigure.client.Client(param["ns"], timeout=2.0)
+            rcnfclient = dynamic_reconfigure.client.Client(param["ns"], timeout=1.0)
             rcnfclient.update_configuration({param["name"]: param["value"]})
             
             

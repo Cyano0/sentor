@@ -41,6 +41,9 @@ if __name__ == "__main__":
         rospy.logerr("No configuration file provided: %s" % e)
         topics = []
 
+    map_frame = rospy.get_param("~map_frame", "map")         
+    base_frame = rospy.get_param("~base_frame", "base_link") 
+    
     topic_mappers = []
     print "Mapping topics:"
     for i, topic in enumerate(topics):
@@ -55,7 +58,7 @@ if __name__ == "__main__":
             include = topic["include"]
 
         if include:
-            topic_mappers.append(TopicMapper(topic, i))
+            topic_mappers.append(TopicMapper(topic, map_frame, base_frame, i))
             
     time.sleep(1)
     
