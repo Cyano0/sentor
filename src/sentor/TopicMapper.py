@@ -30,11 +30,14 @@ class bcolors:
 class TopicMapper(Thread):
     
     
-    def __init__(self, config, thread_num):
+    def __init__(self, config, map_frame, base_frame, thread_num):
         Thread.__init__(self)
         
         self.config = config
+        self.map_frame = map_frame
+        self.base_frame = base_frame
         self.thread_num = thread_num
+        
         self.topic_name = config["name"]
         
         self.set_limits()
@@ -195,8 +198,8 @@ class TopicMapper(Thread):
     def get_transform(self):
         
         now = rospy.Time(0)
-        self.tf_listener.waitForTransform("map", "base_link", now, rospy.Duration(2.0))
-        (trans,rot) = self.tf_listener.lookupTransform("map", "base_link", now)
+        self.tf_listener.waitForTransform(self.map_frame, self.base_frame, now, rospy.Duration(1.0))
+        (trans,rot) = self.tf_listener.lookupTransform(self.map_frame, self.base_frame, now)
         
         return trans[0], trans[1]
         

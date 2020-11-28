@@ -1,16 +1,15 @@
-- name: "/row_detector/health_monitor"
+- name: "/topic_name"
   rate: 5.0 
-  arg: "msg.lines_accepted.data == False"
+  arg: "msg.data"
   stat: "mean"
-  map: "/home/adam/rasberry_ws/src/thorvald_uv/thorvald_uv_bringup/config/uv_site_files/riseholme/rtk/map.yaml"
-#  limits: [11.0, 25.0, -40.0, -8.0]
+  limits: [11.0, 25.0, -40.0, -8.0]
   resolution: 1.5
   include: True
 
-- name: "/row_detector/health_monitor"
+- name: "/topic_name"
   rate: 5.0 
-  arg: "msg.lines_accepted.data == False"
+  arg: "not msg.data"
   stat: "std"
-  limits: [11.0, 25.0, -40.0, -8.0]
+  map: "/home/user/maps/map.yaml"
   resolution: 1.5
   include: True

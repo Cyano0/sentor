@@ -1,10 +1,14 @@
 <?xml version="1.0" ?>
 <launch>
 
+  <arg name="map_frame" default="map"/>
+  <arg name="base_frame" default="base_link"/>
   <arg name="config_file" default=""/>
   <arg name="map_pub_rate" default="0"/>
 
   <node pkg="sentor" type="topic_mapping_node.py" name="topic_mapper" output="screen">
+    <param name="~map_frame" value="$(arg map_frame)" />
+    <param name="~base_frame" value="$(arg base_frame)" />
     <param name="~config_file" value="$(arg config_file)" />
     <param name="~map_pub_rate" value="$(arg map_pub_rate)" />
   </node>	
