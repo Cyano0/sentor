@@ -1,7 +1,4 @@
 - name: "/topic_name"
-  rate: 5.0 
-  base_frame: "base_link"
-  map_frame: "map"
   arg: "msg.data"
   stat: "mean"
   limits: [11.0, 25.0, -40.0, -8.0]
@@ -9,7 +6,6 @@
   include: True
 
 - name: "/topic_name"
-  rate: 5.0 
   arg: "not msg.data"
   stat: "stdev"
   map: "/home/user/maps/map.yaml"
