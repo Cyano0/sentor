@@ -57,8 +57,7 @@ class TopicMapServer(object):
                 map_dir = os.path.join(self.base_dir, str(uuid.uuid4()))
                 os.mkdir(map_dir)
                 
-                _map = mapper.map
-                pickle.dump(_map, open(map_dir + "/topic_map.pkl", "wb"))
+                pickle.dump(mapper.map, open(map_dir + "/topic_map.pkl", "wb"))
             
                 with open(map_dir + "/config.yaml",'w') as f:
                     yaml.dump(mapper.config, f, default_flow_style=False)                
@@ -149,7 +148,8 @@ class TopicMapServer(object):
                     
                 map_msg = TopicMap()
                 map_msg.header.stamp = rospy.Time.now()
-                map_msg.header.frame_id = "/map"
+                map_msg.header.frame_id = mapper.map_frame
+                map_msg.child_frame_id = mapper.base_frame
                 map_msg.topic_name = mapper.topic_name
                 map_msg.topic_arg = mapper.config["arg"]
                 map_msg.stat = mapper.config["stat"]
@@ -163,8 +163,8 @@ class TopicMapServer(object):
                 topic_maps.topic_maps.append(map_msg)
                 
         return topic_maps
-        
-                
+    
+    
     def stop(self):
 
         self._stop_event.set()    

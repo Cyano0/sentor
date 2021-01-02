@@ -30,15 +30,23 @@ class bcolors:
 class TopicMapper(Thread):
     
     
-    def __init__(self, config, map_frame, base_frame, thread_num):
+    def __init__(self, config, thread_num):
         Thread.__init__(self)
         
         self.config = config
-        self.map_frame = map_frame
-        self.base_frame = base_frame
         self.thread_num = thread_num
-        
         self.topic_name = config["name"]
+        
+        self.map_frame = "map"
+        if "map_frame" in config:
+            self.map_frame = config["map_frame"]
+            
+        self.base_frame = "base_link"
+        if "base_frame" in config:
+            self.base_frame = config["base_frame"]
+            
+        self.config["map_frame"] = self.map_frame
+        self.config["base_frame"] = self.base_frame
         
         self.set_limits()
         self.config["limits"] = [self.x_min, self.x_max, self.y_min, self.y_max]
@@ -85,7 +93,7 @@ class TopicMapper(Thread):
         self.map = np.zeros((self.nx, self.ny))  
         self.map[:] = np.nan
         
-        if self.config["stat"] == "std":
+        if self.config["stat"] == "stdev":
             self.wma = np.zeros((self.nx, self.ny))
             self.wma[:] = np.nan
             
@@ -104,7 +112,7 @@ class TopicMapper(Thread):
         elif self.config["stat"] == "max":
             stat = self._max
             
-        elif self.config["stat"] == "std":
+        elif self.config["stat"] == "stdev":
             stat = self._std
             
         else:
@@ -185,7 +193,7 @@ class TopicMapper(Thread):
             try:
                 x, y = self.get_transform()
             except: 
-                rospy.logwarn("Failed to get transform between the map and baselink frames")
+                rospy.logwarn("Failed to get tf transform between {} and {}".format(self.map_frame, self.base_frame))
                 return
                 
             if self.x_min <= x <= self.x_max and self.y_min <= y <= self.y_max:  
