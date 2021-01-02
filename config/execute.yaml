@@ -35,7 +35,7 @@
   - reconf:
       verbose: True
       params:
-      - ns: row_detector
+      - namespace: row_detector
         name: position_error_threshold
         value: -1
   - log:
@@ -58,9 +58,9 @@
   - reconf:
       verbose: True
       params:
-      - ns: row_detector
+      - namespace: row_detector
         name: position_error_threshold
-        value: 0.3
+        value: "_default"
   - log:
       message: "Row detection enabled"
       level: info

@@ -1,4 +1,5 @@
 std_msgs/Header header
+string child_frame_id
 string topic_name
 string topic_arg
 string stat

@@ -73,10 +73,9 @@ class Executor(object):
                     
             service_class = rosservice.get_service_class_by_name(service_name)
             
+            timeout_srv = 1.0
             if "timeout" in process["call"]:
                 timeout_srv = process["call"]["timeout"]
-            else:
-                timeout_srv = 1.0
             
             req = service_class._request_class()
             for arg in process["call"]["service_args"]: exec(arg)
@@ -106,10 +105,9 @@ class Executor(object):
             topic_name = process["publish"]["topic_name"]
             topic_name = self.get_name(topic_name)
             
+            topic_latched = False
             if "topic_latched" in process["publish"]:
                 topic_latched = process["publish"]["topic_latched"]
-            else:
-                topic_latched = False
             
             msg_class, real_topic, _ = rostopic.get_topic_class(topic_name)
             pub = rospy.Publisher(real_topic, msg_class, latch=topic_latched, 
@@ -167,11 +165,10 @@ class Executor(object):
             d["kwargs"]["action_client"] = action_client
             d["kwargs"]["goal"] = goal
             d["kwargs"]["verbose"] = self.is_verbose(process["action"])
-            
+
+            d["kwargs"]["wait"] = False            
             if "wait" in process["action"]:
                 d["kwargs"]["wait"] = process["action"]["wait"]
-            else:
-                d["kwargs"]["wait"] = False
             
             self.processes.append(d)
         
@@ -242,6 +239,12 @@ class Executor(object):
     def init_reconf(self, process):
         
         try:
+            default_params = []
+            for param in process["reconf"]["params"]:
+                rcnfclient = dynamic_reconfigure.client.Client(param["namespace"], timeout=5.0)
+                default_config = rcnfclient.get_configuration()
+                default_params.append(default_config[param["name"]])
+            
             d = {}
             d["name"] = "reconf"
             d["verbose"] = self.is_verbose(process["reconf"])
@@ -249,6 +252,7 @@ class Executor(object):
             d["func"] = "self.reconf(**kwargs)"
             d["kwargs"] = {}
             d["kwargs"]["params"] = process["reconf"]["params"]
+            d["kwargs"]["default_params"] = default_params
             
             self.processes.append(d)
 
@@ -315,10 +319,9 @@ class Executor(object):
             d["kwargs"] = {}
             d["kwargs"]["cp"] = cp
             
+            d["kwargs"]["args"] = None
             if "run_args" in process["custom"]:
                 d["kwargs"]["args"] = process["custom"]["run_args"]
-            else:
-                d["kwargs"]["args"] = None
             
             self.processes.append(d)
             
@@ -430,11 +433,17 @@ class Executor(object):
             self.event_cb("CUSTOM MSG: " + message, level)
             
             
-    def reconf(self, params):
+    def reconf(self, params, default_params):
         
-        for param in params:
-            rcnfclient = dynamic_reconfigure.client.Client(param["ns"], timeout=1.0)
-            rcnfclient.update_configuration({param["name"]: param["value"]})
+        for param, default_param in zip(params, default_params):            
+            rcnfclient = dynamic_reconfigure.client.Client(param["namespace"], timeout=1.0)
+            
+            if param["value"] != "_default":
+                value = param["value"]
+            else:
+                value = default_param
+                
+            rcnfclient.update_configuration({param["name"]: value})
             
             
     def lock_acquire(self):
