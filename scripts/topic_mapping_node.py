@@ -34,9 +34,12 @@ if __name__ == "__main__":
     rospy.init_node("topic_mapper")
 
     config_file = rospy.get_param("~config_file", "")
-
     try:
-        topics = yaml.load(file(config_file, 'r'))
+        if config_file[0] == "[" and config_file[-1] == "]":
+            items = [yaml.load(file(item, 'r')) for item in eval(config_file)]
+            topics = [item for sublist in items for item in sublist]
+        else:
+            topics = yaml.load(file(config_file, 'r'))
     except Exception as e:
         rospy.logerr("No configuration file provided: %s" % e)
         topics = []
