@@ -41,13 +41,6 @@
   - log:
       message: "expression 1 is not published"
       level: "warn"
-#  - custom:
-#      package: "rasberry_uv"
-#      name: myClass
-#      init_args:
-#      - "Hello"
-#      run_args:
-#      - "World"
   timeout: 0.1
   default_notifications: True
   include: True
