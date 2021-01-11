@@ -35,11 +35,8 @@ if __name__ == "__main__":
 
     config_file = rospy.get_param("~config_file", "")
     try:
-        if config_file[0] == "[" and config_file[-1] == "]":
-            items = [yaml.load(file(item, 'r')) for item in eval(config_file)]
-            topics = [item for sublist in items for item in sublist]
-        else:
-            topics = yaml.load(file(config_file, 'r'))
+        items = [yaml.load(file(item, 'r')) for item in config_file.split(',')]
+        topics = [item for sublist in items for item in sublist]
     except Exception as e:
         rospy.logerr("No configuration file provided: %s" % e)
         topics = []
