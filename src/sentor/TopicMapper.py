@@ -10,7 +10,8 @@ from threading import Thread, Event
 from cv2 import imread
 
 import rospy, rostopic, tf
-import numpy as np, math
+import numpy as np, numpy
+import math
 import yaml, os, subprocess
 
 
@@ -216,14 +217,14 @@ class TopicMapper(Thread):
         try:
             self.topic_arg = eval(self.config["arg"])
         except Exception as e:
-            rospy.logwarn("Exception while evaluating '{}': {}".format(self.config["topic_arg"], e))
+            rospy.logwarn("Exception while evaluating '{}': {}".format(self.config["arg"], e))
             return False
             
         valid_arg = True
         if isinstance(self.topic_arg, bool):
             self.topic_arg = int(self.topic_arg) 
         elif not isinstance(self.topic_arg, int) and not isinstance(self.topic_arg, float):
-            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.topic_arg, type(self.topic_arg), self.config["topic"]))
+            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.config["arg"], type(self.topic_arg), self.topic_name))
             valid_arg = False
         
         return valid_arg
