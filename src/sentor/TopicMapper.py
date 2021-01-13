@@ -57,7 +57,9 @@ class TopicMapper(Thread):
         
         self.nx = self.x_bins.shape[0] + 1
         self.ny = self.y_bins.shape[0] + 1
+        
         self.shape = [self.nx, self.ny]
+        self.config["shape"] = self.shape
         
         self.init_map()
         
