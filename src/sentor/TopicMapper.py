@@ -113,11 +113,10 @@ class TopicMapper(Thread):
             stat = self._max
             
         elif self.config["stat"] == "stdev":
-            stat = self._std
+            stat = self._stdev
             
         else:
             rospy.logerr("Statistic of type '{}' not supported".format(self.config["stat"]))
-            stat = None
             exit()
             
         return stat
@@ -139,7 +138,7 @@ class TopicMapper(Thread):
         return np.max([z, self.topic_arg])
     
     
-    def _std(self, z, N):
+    def _stdev(self, z, N):
         wm = self.wma[self.ix, self.iy]
         if np.isnan(wm): wm=0
 
@@ -193,7 +192,7 @@ class TopicMapper(Thread):
             try:
                 x, y = self.get_transform()
             except: 
-                rospy.logwarn("Failed to get tf transform between {} and {}".format(self.map_frame, self.base_frame))
+                rospy.logwarn("Failed to get a tf transform between {} and {}".format(self.map_frame, self.base_frame))
                 return
                 
             if self.x_min <= x <= self.x_max and self.y_min <= y <= self.y_max:  
@@ -221,11 +220,10 @@ class TopicMapper(Thread):
             return False
             
         valid_arg = True
-        arg_type = type(self.topic_arg)
-        if arg_type is bool:
+        if isinstance(self.topic_arg, bool):
             self.topic_arg = int(self.topic_arg) 
-        elif arg_type is not float and arg_type is not int:
-            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.topic_arg, arg_type, self.config["topic"]))
+        elif not isinstance(self.topic_arg, int) and not isinstance(self.topic_arg, float):
+            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.topic_arg, type(self.topic_arg), self.config["topic"]))
             valid_arg = False
         
         return valid_arg
