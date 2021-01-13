@@ -10,7 +10,8 @@ from threading import Thread, Event
 from cv2 import imread
 
 import rospy, rostopic, tf
-import numpy as np, math
+import numpy as np, numpy
+import math
 import yaml, os, subprocess
 
 
@@ -56,7 +57,9 @@ class TopicMapper(Thread):
         
         self.nx = self.x_bins.shape[0] + 1
         self.ny = self.y_bins.shape[0] + 1
+        
         self.shape = [self.nx, self.ny]
+        self.config["shape"] = self.shape
         
         self.init_map()
         
@@ -113,11 +116,10 @@ class TopicMapper(Thread):
             stat = self._max
             
         elif self.config["stat"] == "stdev":
-            stat = self._std
+            stat = self._stdev
             
         else:
             rospy.logerr("Statistic of type '{}' not supported".format(self.config["stat"]))
-            stat = None
             exit()
             
         return stat
@@ -139,7 +141,7 @@ class TopicMapper(Thread):
         return np.max([z, self.topic_arg])
     
     
-    def _std(self, z, N):
+    def _stdev(self, z, N):
         wm = self.wma[self.ix, self.iy]
         if np.isnan(wm): wm=0
 
@@ -193,7 +195,7 @@ class TopicMapper(Thread):
             try:
                 x, y = self.get_transform()
             except: 
-                rospy.logwarn("Failed to get tf transform between {} and {}".format(self.map_frame, self.base_frame))
+                rospy.logwarn("Failed to get a tf transform between {} and {}".format(self.map_frame, self.base_frame))
                 return
                 
             if self.x_min <= x <= self.x_max and self.y_min <= y <= self.y_max:  
@@ -217,15 +219,14 @@ class TopicMapper(Thread):
         try:
             self.topic_arg = eval(self.config["arg"])
         except Exception as e:
-            rospy.logwarn("Exception while evaluating '{}': {}".format(self.config["topic_arg"], e))
+            rospy.logwarn("Exception while evaluating '{}': {}".format(self.config["arg"], e))
             return False
             
         valid_arg = True
-        arg_type = type(self.topic_arg)
-        if arg_type is bool:
+        if isinstance(self.topic_arg, bool):
             self.topic_arg = int(self.topic_arg) 
-        elif arg_type is not float and arg_type is not int:
-            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.topic_arg, arg_type, self.config["topic"]))
+        elif not isinstance(self.topic_arg, int) and not isinstance(self.topic_arg, float):
+            rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.config["arg"], type(self.topic_arg), self.topic_name))
             valid_arg = False
         
         return valid_arg
