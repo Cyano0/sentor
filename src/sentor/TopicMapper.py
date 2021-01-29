@@ -202,8 +202,6 @@ class TopicMapper(Thread):
         
         if not self._stop_event.isSet():    
             
-            rospy.logwarn("IN CB")
-            
             try:
                 x, y = self.get_transform()
             except: 
