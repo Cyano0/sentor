@@ -3,11 +3,9 @@
   stat: "mean"
   limits: [11.0, 25.0, -40.0, -8.0]
   resolution: 1.5
-  include: True
 
 - name: "/topic_name"
   arg: "not msg.data"
   stat: "stdev"
   map: "/home/user/maps/map.yaml"
   resolution: 1.5
-  include: True

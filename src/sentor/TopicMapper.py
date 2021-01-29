@@ -183,7 +183,17 @@ class TopicMapper(Thread):
         else:
             subscribed_topic = real_topic
             
-        rospy.Subscriber(subscribed_topic, msg_class, self.topic_cb)
+        self.throttle_val = 0
+        if "N" in self.config:
+            self.throttle_val = int(self.config["N"])
+        
+        self.throttle = self.throttle_val
+        if self.throttle_val <= 0:
+            cb = self.topic_cb
+        else:
+            cb = self.topic_cb_throttled
+            
+        rospy.Subscriber(subscribed_topic, msg_class, cb)
             
         return True
             
@@ -191,6 +201,8 @@ class TopicMapper(Thread):
     def topic_cb(self, msg):
         
         if not self._stop_event.isSet():    
+            
+            rospy.logwarn("IN CB")
             
             try:
                 x, y = self.get_transform()
@@ -203,6 +215,15 @@ class TopicMapper(Thread):
                 
                 if valid_arg:
                     self.update_map(x, y)
+                    
+                    
+    def topic_cb_throttled(self, msg):
+        
+        if (self.throttle % self.throttle_val) == 0:
+            self.topic_cb(msg)
+            self.throttle = 1
+        else:
+            self.throttle += 1
 
         
     def get_transform(self):
