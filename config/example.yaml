@@ -1,5 +1,6 @@
 - name : "/expr_1"
-  rate: 5.0
+#  rate: 5.0
+  N: 3
   signal_when:
     condition: "not published"
     timeout: 1.0
@@ -23,7 +24,7 @@
     default_notifications: True
     when_published: False
     process_indices: [2,3]
-    repeat_exec: False
+    repeat_exec: True
     tags: ["expression 1 is False"]
   execute:
   - log:
@@ -43,6 +44,13 @@
       level: "warn"
   timeout: 0.1
   default_notifications: True
+  include: False
+
+
+- name: "/expr_1"
+  N: 5
+  signal_when:
+    condition: "published"
   include: True
 
 

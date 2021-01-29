@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 @author: Francesco Del Duchetto (FDelDuchetto@lincoln.ac.uk)
+@author: Adam Binch (abinch@sagarobotics.com)
 
 Modified from https://github.com/strawlab/ros_comm/blob/master/tools/rostopic/src/rostopic.py
 """
@@ -9,11 +10,12 @@ import rospy
 import threading
 import math
 
+
 class ROSTopicHz(object):
     """
     ROSTopicHz receives messages for a topic and computes frequency stats
     """
-    def __init__(self, topic_name, window_size, filter_expr=None):
+    def __init__(self, topic_name, window_size, throttle_val, filter_expr=None):
         self.lock = threading.Lock()
         self.last_printed_tn = 0
         self.msg_t0 = -1.
@@ -26,6 +28,10 @@ class ROSTopicHz(object):
         if window_size < 0:
             window_size = 50000
         self.window_size = window_size
+        
+        self.throttle_val = throttle_val
+        self.throttle = self.throttle_val
+        
 
     def callback_hz(self, m):
         """
@@ -58,6 +64,16 @@ class ROSTopicHz(object):
             #only keep statistics for the last 10000 messages so as not to run out of memory
             if len(self.times) > self.window_size - 1:
                 self.times.pop(0)
+                
+                
+    def callback_hz_throttled(self, m):
+        
+        if (self.throttle % self.throttle_val) == 0:
+            self.callback_hz(m)
+            self.throttle = 1
+        else:
+            self.throttle += 1
+            
 
     def print_hz(self):
         """
@@ -92,6 +108,7 @@ class ROSTopicHz(object):
 
             self.last_printed_tn = self.msg_tn
         print("average rate: %.3f\n\tmin: %.3fs max: %.3fs std dev: %.5fs window: %s"%(rate, min_delta, max_delta, std_dev, n+1))
+        
 
     def get_hz(self):
         """

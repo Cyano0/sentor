@@ -127,6 +127,7 @@ if __name__ == "__main__":
             continue
 
         rate = 0
+        N = 0
         signal_when = {}
         signal_lambdas = []
         processes = []
@@ -136,6 +137,8 @@ if __name__ == "__main__":
         
         if 'rate' in topic:
             rate = topic['rate']
+        if 'N' in topic:
+            N = int(topic['N'])
         if 'signal_when' in topic:
             signal_when = topic['signal_when']
         if 'signal_lambdas' in topic:
@@ -150,7 +153,7 @@ if __name__ == "__main__":
             include = topic['include']
 
         if include:
-            topic_monitor = TopicMonitor(topic_name, rate, signal_when, signal_lambdas, processes, 
+            topic_monitor = TopicMonitor(topic_name, rate, N, signal_when, signal_lambdas, processes, 
                                          timeout, default_notifications, event_callback, i)
 
             topic_monitors.append(topic_monitor)

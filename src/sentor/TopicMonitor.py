@@ -34,12 +34,13 @@ class bcolors:
 class TopicMonitor(Thread):
 
 
-    def __init__(self, topic_name, rate, signal_when_config, signal_lambdas_config, processes, 
+    def __init__(self, topic_name, rate, N, signal_when_config, signal_lambdas_config, processes, 
                  timeout, default_notifications, event_callback, thread_num):
         Thread.__init__(self)
 
         self.topic_name = topic_name
         self.rate = rate
+        self.N = N
         self.signal_when_config = signal_when_config
         self.signal_lambdas_config = signal_lambdas_config
         self.processes = processes
@@ -257,25 +258,40 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_hz_monitor(self, subscribed_topic, topic_name, msg_class):
-        hz = ROSTopicHz(topic_name, 1000)
+        hz = ROSTopicHz(topic_name, 1000, self.N)
+        
+        if self.N <= 0:
+            cb = hz.callback_hz
+        else:
+            cb = hz.callback_hz_throttled
 
-        rospy.Subscriber(subscribed_topic, msg_class, hz.callback_hz)
+        rospy.Subscriber(subscribed_topic, msg_class, cb)
 
         return hz
         
 
     def _instantiate_pub_monitor(self, subscribed_topic, topic_name, msg_class):
-        pub = ROSTopicPub(topic_name)
+        pub = ROSTopicPub(topic_name, self.N)
+        
+        if self.N <= 0:
+            cb = pub.callback_pub
+        else:
+            cb = pub.callback_pub_throttled
 
-        rospy.Subscriber(subscribed_topic, msg_class, pub.callback_pub)
+        rospy.Subscriber(subscribed_topic, msg_class, cb)
 
         return pub
         
 
     def _instantiate_lambda_monitor(self, subscribed_topic, msg_class, lambda_fn_str, lambda_config):
-        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config)
+        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config, self.N)
 
-        rospy.Subscriber(subscribed_topic, msg_class, filter.callback_filter)
+        if self.N <= 0:
+            cb = filter.callback_filter
+        else:
+            cb = filter.callback_filter_throttled
+            
+        rospy.Subscriber(subscribed_topic, msg_class, cb)
 
         return filter
         
