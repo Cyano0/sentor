@@ -11,6 +11,7 @@ import rospy, math, numpy
 class ROSTopicFilter(object):
 
     def __init__(self, topic_name, lambda_fn_str, config, throttle_val):
+        
         self.topic_name = topic_name
         self.lambda_fn_str = lambda_fn_str
         self.config = config
@@ -47,7 +48,6 @@ class ROSTopicFilter(object):
         # if the last value was read: set value_read to False
         if self.value_read:
             self.value_read = False
-        # else if filter_satisfied
         elif self.filter_satisfied:
             self.unread_satisfied = True
             # notify the listeners
@@ -67,11 +67,6 @@ class ROSTopicFilter(object):
             self.throttle = 1
         else:
             self.throttle += 1
-            
-        # if not self.filter_satisfied and not self.value_read:
-        #     self.filter_satisfied = self.lambda_fn(value)
-
-        # print value, self.filter_satisfied, self.value_read
 
 
     def is_filter_satisfied(self):
@@ -85,11 +80,9 @@ class ROSTopicFilter(object):
     
 
     def register_satisfied_cb(self, func):
-
         self.sat_callbacks.append(func)
         
 
     def register_unsatisfied_cb(self, func):
-
         self.unsat_callbacks.append(func)
 #####################################################################################

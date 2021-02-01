@@ -21,15 +21,14 @@ class MultiMonitor(object):
         self.error_code = []
         
         self.monitors_pub = rospy.Publisher("/sentor/monitors", MonitorArray, latch=True, queue_size=1)
-        
-        rospy.Timer(rospy.Duration(1.0/rate), self.cb)
+        rospy.Timer(rospy.Duration(1.0/rate), self.callback)
 
 
     def register_monitors(self, topic_monitor):
         self.topic_monitors.append(topic_monitor)
         
         
-    def cb(self, event=None):
+    def callback(self, event=None):
         
         if not self._stop_event.isSet():
             
