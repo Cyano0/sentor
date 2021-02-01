@@ -120,6 +120,14 @@ if __name__ == "__main__":
     topic_monitors = []
     print "Monitoring topics:"
     for i, topic in enumerate(topics):
+        
+        include = True
+        if 'include' in topic:
+            include = topic['include']
+            
+        if not include:
+            continue
+        
         try:
             topic_name = topic["name"]
         except Exception as e:
@@ -133,7 +141,6 @@ if __name__ == "__main__":
         processes = []
         timeout = 0
         default_notifications = True
-        include = True
         
         if 'rate' in topic:
             rate = topic['rate']
@@ -149,16 +156,13 @@ if __name__ == "__main__":
             timeout = topic['timeout']
         if 'default_notifications' in topic:
             default_notifications = topic['default_notifications']
-        if 'include' in topic:
-            include = topic['include']
 
-        if include:
-            topic_monitor = TopicMonitor(topic_name, rate, N, signal_when, signal_lambdas, processes, 
-                                         timeout, default_notifications, event_callback, i)
+        topic_monitor = TopicMonitor(topic_name, rate, N, signal_when, signal_lambdas, processes, 
+                                     timeout, default_notifications, event_callback, i)
 
-            topic_monitors.append(topic_monitor)
-            safety_monitor.register_monitors(topic_monitor)
-            multi_monitor.register_monitors(topic_monitor)
+        topic_monitors.append(topic_monitor)
+        safety_monitor.register_monitors(topic_monitor)
+        multi_monitor.register_monitors(topic_monitor)
             
     time.sleep(1)
 
