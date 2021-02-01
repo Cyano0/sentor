@@ -90,7 +90,7 @@ class TopicMonitor(Thread):
 
         if real_topic is None:
             self.event_callback("Topic %s is not published" % self.topic_name, "warn")
-            if self.signal_when.lower() == 'not published' and self.safety_critical:
+            if self.signal_when_cfg["signal_when"].lower() == 'not published' and self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
             return False
         
@@ -179,6 +179,7 @@ class TopicMonitor(Thread):
         self.signal_when_cfg["process_indices"] = None
         self.signal_when_cfg["repeat_exec"] = False
         self.signal_when_cfg["tags"] = []
+        self.signal_when_cfg["N"] = self.N
         
         if type(self.signal_when_config) is str:
             self.signal_when_cfg["signal_when"] = self.signal_when_config
@@ -198,6 +199,8 @@ class TopicMonitor(Thread):
                 self.signal_when_cfg["repeat_exec"] = self.signal_when_config["repeat_exec"]
             if "tags" in self.signal_when_config:
                 self.signal_when_cfg["tags"] = self.signal_when_config["tags"]
+            if "N" in self.signal_when_config:
+                self.signal_when_cfg["N"] = int(self.signal_when_config["N"])
             
         if self.signal_when_cfg["timeout"] <= 0:
             self.signal_when_cfg["timeout"] = 0.1
@@ -223,6 +226,7 @@ class TopicMonitor(Thread):
         lambda_config["process_indices"] = None
         lambda_config["repeat_exec"] = False
         lambda_config["tags"] = []
+        lambda_config["N"] = self.N
         
         if "expression" in signal_lambda:
             lambda_config["expr"] = signal_lambda["expression"]
@@ -244,6 +248,8 @@ class TopicMonitor(Thread):
             lambda_config["repeat_exec"] = signal_lambda["repeat_exec"]      
         if "tags" in signal_lambda:
             lambda_config["tags"] = signal_lambda["tags"]      
+        if "N" in signal_lambda:
+            lambda_config["N"] = int(signal_lambda["N"])
             
         if lambda_config["timeout"] <= 0:
             lambda_config["timeout"] = 0.1
@@ -259,9 +265,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_hz_monitor(self, subscribed_topic, topic_name, msg_class):
-        hz = ROSTopicHz(topic_name, 1000, self.N)
+        hz = ROSTopicHz(topic_name, 1000, self.signal_when_cfg["N"])
         
-        if self.N <= 0:
+        if self.signal_when_cfg["N"] <= 0:
             cb = hz.callback_hz
         else:
             cb = hz.callback_hz_throttled
@@ -272,9 +278,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_pub_monitor(self, subscribed_topic, topic_name, msg_class):
-        pub = ROSTopicPub(topic_name, self.N)
+        pub = ROSTopicPub(topic_name, self.signal_when_cfg["N"])
         
-        if self.N <= 0:
+        if self.signal_when_cfg["N"] <= 0:
             cb = pub.callback_pub
         else:
             cb = pub.callback_pub_throttled
@@ -285,9 +291,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_lambda_monitor(self, subscribed_topic, msg_class, lambda_fn_str, lambda_config):
-        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config, self.N)
+        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config, lambda_config["N"])
 
-        if self.N <= 0:
+        if lambda_config["N"] <= 0:
             cb = filter.callback_filter
         else:
             cb = filter.callback_filter_throttled
