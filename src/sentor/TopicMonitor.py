@@ -90,7 +90,7 @@ class TopicMonitor(Thread):
 
         if real_topic is None:
             self.event_callback("Topic %s is not published" % self.topic_name, "warn")
-            if self.signal_when.lower() == 'not published' and self.safety_critical:
+            if self.signal_when_cfg["signal_when"].lower() == 'not published' and self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
             return False
         
@@ -119,7 +119,7 @@ class TopicMonitor(Thread):
 
         # Do we need a hz monitor?
         hz_monitor_required = False
-        if self.signal_when.lower() == 'not published':
+        if self.signal_when_cfg["signal_when"].lower() == 'not published':
             hz_monitor_required = True
         for signal_lambda in self.signal_lambdas_config:
              if "when_published" in signal_lambda:
@@ -129,16 +129,16 @@ class TopicMonitor(Thread):
         if hz_monitor_required:
             self.hz_monitor = self._instantiate_hz_monitor(subscribed_topic, self.topic_name, msg_class)
 
-        if self.signal_when.lower() == 'published':
+        if self.signal_when_cfg["signal_when"].lower() == 'published':
             print "Signaling 'published' for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
             self.pub_monitor = self._instantiate_pub_monitor(subscribed_topic, self.topic_name, msg_class)
             self.pub_monitor.register_published_cb(self.published_cb)
             
-            if self.safety_critical:
+            if self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
 
-        elif self.signal_when.lower() == 'not published':
-            print "Signaling 'not published' for "+ bcolors.BOLD + str(self.signal_when_timeout) + " seconds" + bcolors.ENDC +" for " + bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
+        elif self.signal_when_cfg["signal_when"].lower() == 'not published':
+            print "Signaling 'not published' for "+ bcolors.BOLD + str(self.signal_when_cfg["timeout"]) + " seconds" + bcolors.ENDC +" for " + bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
 
         if len(self.signal_lambdas_config):
             print "Signaling expressions for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + ":"
@@ -171,42 +171,46 @@ class TopicMonitor(Thread):
         
     def process_signal_config(self):
         
-        self.signal_when = ""
-        self.signal_when_timeout = self.timeout
-        self.safety_critical = False
-        self.signal_when_def_nots = self.default_notifications
-        self.process_indices = None
-        self.repeat_exec = False
-        self.tags = []
+        self.signal_when_cfg = {}
+        self.signal_when_cfg["signal_when"] = ""
+        self.signal_when_cfg["timeout"] = self.timeout
+        self.signal_when_cfg["safety_critical"] = False
+        self.signal_when_cfg["default_notifications"] = self.default_notifications
+        self.signal_when_cfg["process_indices"] = None
+        self.signal_when_cfg["repeat_exec"] = False
+        self.signal_when_cfg["tags"] = []
+        self.signal_when_cfg["N"] = self.N
         
         if type(self.signal_when_config) is str:
-            self.signal_when = self.signal_when_config
+            self.signal_when_cfg["signal_when"] = self.signal_when_config
         elif type(self.signal_when_config) is dict:
         
             if "condition" in self.signal_when_config:
-                self.signal_when = self.signal_when_config["condition"]
+                self.signal_when_cfg["signal_when"] = self.signal_when_config["condition"]
             if "timeout" in self.signal_when_config:
-                self.signal_when_timeout = self.signal_when_config["timeout"]
+                self.signal_when_cfg["timeout"] = self.signal_when_config["timeout"]
             if "safety_critical" in self.signal_when_config:
-                self.safety_critical = self.signal_when_config["safety_critical"]
+                self.signal_when_cfg["safety_critical"] = self.signal_when_config["safety_critical"]
             if "default_notifications" in self.signal_when_config:
-                self.signal_when_def_nots = self.signal_when_config["default_notifications"]
+                self.signal_when_cfg["default_notifications"] = self.signal_when_config["default_notifications"]
             if "process_indices" in self.signal_when_config:
-                self.process_indices = self.signal_when_config["process_indices"]
+                self.signal_when_cfg["process_indices"] = self.signal_when_config["process_indices"]
             if "repeat_exec" in self.signal_when_config:
-                self.repeat_exec = self.signal_when_config["repeat_exec"]
+                self.signal_when_cfg["repeat_exec"] = self.signal_when_config["repeat_exec"]
             if "tags" in self.signal_when_config:
-                self.tags = self.signal_when_config["tags"]
+                self.signal_when_cfg["tags"] = self.signal_when_config["tags"]
+            if "N" in self.signal_when_config:
+                self.signal_when_cfg["N"] = int(self.signal_when_config["N"])
             
-        if self.signal_when_timeout <= 0:
-            self.signal_when_timeout = 0.1
+        if self.signal_when_cfg["timeout"] <= 0:
+            self.signal_when_cfg["timeout"] = 0.1
         
         # for publishing list of safety critical conditions
-        if self.safety_critical:
+        if self.signal_when_cfg["safety_critical"]:
             d = {}
             d["safe"] = True
-            d["tags"] = self.tags
-            self.crit_conditions[self.signal_when] = d
+            d["tags"] = self.signal_when_cfg["tags"]
+            self.crit_conditions[self.signal_when_cfg["signal_when"]] = d
             
         
     def process_lambda_config(self, signal_lambda):
@@ -222,6 +226,7 @@ class TopicMonitor(Thread):
         lambda_config["process_indices"] = None
         lambda_config["repeat_exec"] = False
         lambda_config["tags"] = []
+        lambda_config["N"] = self.N
         
         if "expression" in signal_lambda:
             lambda_config["expr"] = signal_lambda["expression"]
@@ -243,6 +248,8 @@ class TopicMonitor(Thread):
             lambda_config["repeat_exec"] = signal_lambda["repeat_exec"]      
         if "tags" in signal_lambda:
             lambda_config["tags"] = signal_lambda["tags"]      
+        if "N" in signal_lambda:
+            lambda_config["N"] = int(signal_lambda["N"])
             
         if lambda_config["timeout"] <= 0:
             lambda_config["timeout"] = 0.1
@@ -258,9 +265,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_hz_monitor(self, subscribed_topic, topic_name, msg_class):
-        hz = ROSTopicHz(topic_name, 1000, self.N)
+        hz = ROSTopicHz(topic_name, 1000, self.signal_when_cfg["N"])
         
-        if self.N <= 0:
+        if self.signal_when_cfg["N"] <= 0:
             cb = hz.callback_hz
         else:
             cb = hz.callback_hz_throttled
@@ -271,9 +278,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_pub_monitor(self, subscribed_topic, topic_name, msg_class):
-        pub = ROSTopicPub(topic_name, self.N)
+        pub = ROSTopicPub(topic_name, self.signal_when_cfg["N"])
         
-        if self.N <= 0:
+        if self.signal_when_cfg["N"] <= 0:
             cb = pub.callback_pub
         else:
             cb = pub.callback_pub_throttled
@@ -284,9 +291,9 @@ class TopicMonitor(Thread):
         
 
     def _instantiate_lambda_monitor(self, subscribed_topic, msg_class, lambda_fn_str, lambda_config):
-        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config, self.N)
+        filter = ROSTopicFilter(self.topic_name, lambda_fn_str, lambda_config, lambda_config["N"])
 
-        if self.N <= 0:
+        if lambda_config["N"] <= 0:
             cb = filter.callback_filter
         else:
             cb = filter.callback_filter_throttled
@@ -306,20 +313,20 @@ class TopicMonitor(Thread):
                 self.is_instantiated = True
                 
         def cb(_):
-            if self.signal_when.lower() == 'not published':
-                if self.safety_critical:
+            if self.signal_when_cfg["signal_when"].lower() == 'not published':
+                if self.signal_when_cfg["safety_critical"]:
                     self.signal_when_is_safe = False
-                    self.crit_conditions[self.signal_when]["safe"] = False
-                if self.signal_when_def_nots and self.safety_critical:
+                    self.crit_conditions[self.signal_when_cfg["signal_when"]]["safe"] = False
+                if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
                     self.event_callback("SAFETY CRITICAL: Topic %s is not published anymore" % self.topic_name, "error")
-                elif self.signal_when_def_nots:
+                elif self.signal_when_cfg["default_notifications"]:
                     self.event_callback("Topic %s is not published anymore" % self.topic_name, "warn")
-                if not self.repeat_exec:
-                    self.execute(process_indices=self.process_indices)
+                if not self.signal_when_cfg["repeat_exec"]:
+                    self.execute(process_indices=self.signal_when_cfg["process_indices"])
 
         def repeat_cb(_):
-            if self.signal_when.lower() == 'not published':
-                self.execute(process_indices=self.process_indices)
+            if self.signal_when_cfg["signal_when"].lower() == 'not published':
+                self.execute(process_indices=self.signal_when_cfg["process_indices"])
 
         timer = None
         timer_repeat = None
@@ -335,23 +342,23 @@ class TopicMonitor(Thread):
                     if rate is None and self.is_topic_published:
                         self.is_topic_published = False
     
-                        timer = rospy.Timer(rospy.Duration.from_sec(self.signal_when_timeout), cb, oneshot=True)
+                        timer = rospy.Timer(rospy.Duration.from_sec(self.signal_when_cfg["timeout"]), cb, oneshot=True)
                         
-                        if self.repeat_exec:
-                            timer_repeat = rospy.Timer(rospy.Duration.from_sec(self.signal_when_timeout), repeat_cb, oneshot=False)
+                        if self.signal_when_cfg["repeat_exec"]:
+                            timer_repeat = rospy.Timer(rospy.Duration.from_sec(self.signal_when_cfg["timeout"]), repeat_cb, oneshot=False)
     
                     if rate is not None:
                         self.is_topic_published = True
                         
-                        if self.safety_critical:
+                        if self.signal_when_cfg["safety_critical"]:
                             self.signal_when_is_safe = True
-                            self.crit_conditions[self.signal_when]["safe"] = True
+                            self.crit_conditions[self.signal_when_cfg["signal_when"]]["safe"] = True
     
                         if timer is not None:
                             timer.shutdown()
                             timer = None
                         
-                        if self.repeat_exec:
+                        if self.signal_when_cfg["repeat_exec"]:
                             if timer_repeat is not None:
                                 timer_repeat.shutdown()
                                 timer_repeat = None
@@ -425,14 +432,14 @@ class TopicMonitor(Thread):
 
     def published_cb(self, msg):
         if not self._stop_event.isSet():
-            if self.safety_critical:
+            if self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
-                self.crit_conditions[self.signal_when]["safe"] = False
-            if self.default_notifications and self.safety_critical:
+                self.crit_conditions[self.signal_when_cfg["signal_when"]]["safe"] = False
+            if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
                 self.event_callback("SAFETY CRITICAL: Topic %s is published " % (self.topic_name), "error")
-            elif self.default_notifications:
+            elif self.signal_when_cfg["default_notifications"]:
                 self.event_callback("Topic %s is published " % (self.topic_name), "warn")
-            #self.execute(msg, self.process_indices)
+            #self.execute(msg, self.signal_when_cfg["process_indices"])
                 
                 
     def kill_timer(self, timer_dict, expr):
