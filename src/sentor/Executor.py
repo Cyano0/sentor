@@ -205,6 +205,7 @@ class Executor(object):
             d["func"] = "self.shell(**kwargs)"
             d["kwargs"] = {}
             d["kwargs"]["cmd_args"] = process["shell"]["cmd_args"]
+            d["kwargs"]["shell_features"] = process["shell"]["shell_features"] if "shell_features" in process["shell"] else False
             
             self.processes.append(d)
 
@@ -410,9 +411,10 @@ class Executor(object):
         rospy.sleep(duration)
         
         
-    def shell(self, cmd_args):
+    def shell(self, cmd_args, shell_features):
         
         process = subprocess.Popen(cmd_args,
+                     shell=shell_features,
                      stdout=subprocess.PIPE, 
                      stderr=subprocess.PIPE)
                      
