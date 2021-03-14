@@ -240,19 +240,23 @@ class Executor(object):
     def init_reconf(self, process):
         
         try:
-            default_params = []
-            for param in process["reconf"]["params"]:
-                rcnfclient = dynamic_reconfigure.client.Client(param["namespace"], timeout=5.0)
-                default_config = rcnfclient.get_configuration()
-                default_params.append(default_config[param["name"]])
+            params = process["reconf"]["params"]
+            namespaces = set([param["namespace"] for param in params])
+            
+            default_config = {}
+            for namespace in namespaces:
+                rcnfclient = dynamic_reconfigure.client.Client(namespace, timeout=2.0)
+                default_config[namespace] = rcnfclient.get_configuration()
+                
+            default_params = [default_config[param["namespace"]][param["name"]] for param in params]
             
             d = {}
             d["name"] = "reconf"
             d["verbose"] = self.is_verbose(process["reconf"])
-            d["def_msg"] = ("Reconfiguring parameters: {}".format(process["reconf"]["params"]), "info", "")
+            d["def_msg"] = ("Reconfiguring parameters: {}".format(params), "info", "")
             d["func"] = "self.reconf(**kwargs)"
             d["kwargs"] = {}
-            d["kwargs"]["params"] = process["reconf"]["params"]
+            d["kwargs"]["params"] = params
             d["kwargs"]["default_params"] = default_params
             
             self.processes.append(d)
@@ -463,7 +467,7 @@ class Executor(object):
     def goal_cb(self, status, result):
         
         if self.verbose_action and status == 3:
-            self.event_cb("Goal achieved for action with spec '{}'".format(self.spec), "info", self.goal)
+            self.event_cb("Goal succeeded for action with spec '{}'".format(self.spec), "info", self.goal)
         elif status == 2 or status == 6:
             self.event_cb("Goal preempted for action with spec '{}'".format(self.spec), "warn", self.goal)
         elif status != 3:
