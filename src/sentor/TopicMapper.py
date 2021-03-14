@@ -244,7 +244,7 @@ class TopicMapper(Thread):
         valid_arg = True
         if isinstance(self.topic_arg, bool):
             self.topic_arg = int(self.topic_arg) 
-        elif not isinstance(self.topic_arg, int) and not isinstance(self.topic_arg, float):
+        elif not isinstance(self.topic_arg, float) and not isinstance(self.topic_arg, int):
             rospy.logwarn("Topic arg '{}' of {} on topic '{}' cannot be processed".format(self.config["arg"], type(self.topic_arg), self.topic_name))
             valid_arg = False
         
