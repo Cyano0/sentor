@@ -21,6 +21,7 @@ import os
 
 # TODO nice printing of frequency of the topic with curses
 # TODO consider timeout
+# a
 
 unpublished_topics_indexes = []
 satisfied_filters_indexes = []
