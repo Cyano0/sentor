@@ -1,4 +1,5 @@
 string topic
-string expression
-bool safe
+string condition
+bool safety_critical
+bool satisfied
 string[] tags
