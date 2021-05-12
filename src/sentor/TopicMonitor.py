@@ -206,7 +206,8 @@ class TopicMonitor(Thread):
             self.signal_when_cfg["timeout"] = 0.1
         
         # for publishing to sentor/monitors
-        if self.signal_when_cfg["signal_when"]:
+        if self.signal_when_cfg["signal_when"].lower() == "not published" \
+        or self.signal_when_cfg["signal_when"].lower() == "published":
             d = {}
             d["satisfied"] = False
             d["safety_critical"] = self.signal_when_cfg["safety_critical"]
