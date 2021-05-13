@@ -62,7 +62,6 @@ class Executor(object):
                 self.processes.append("not_initialised")
         
         self.default_indices = range(len(self.processes))        
-        print "\n"
                     
                     
     def init_call(self, process):
@@ -147,7 +146,7 @@ class Executor(object):
             action_client = actionlib.SimpleActionClient(namespace, action_spec)
             wait = action_client.wait_for_server(rospy.Duration(5.0))
             if not wait:
-                e = "Action server with namespace '{}' and action spec '{}' not available".format(namespace, spec)
+                e = "Action server with namespace '{}' and action specification '{}' not available".format(namespace, spec)
                 self.event_cb(self.init_err_str.format("action", e), "warn")
                 self.processes.append("not_initialised")
                 return
@@ -158,9 +157,10 @@ class Executor(object):
             d = {}
             d["name"] = "action"
             d["verbose"] = self.is_verbose(process["action"])
-            d["def_msg"] = ("Sending goal for action with spec '{}'".format(spec), "info", goal)
+            d["def_msg"] = ("Sending goal for '{}' action with specification '{}'".format(namespace, spec), "info", goal)
             d["func"] = "self.action(**kwargs)"
             d["kwargs"] = {}
+            d["kwargs"]["namespace"] = namespace
             d["kwargs"]["spec"] = spec
             d["kwargs"]["action_client"] = action_client
             d["kwargs"]["goal"] = goal
@@ -399,8 +399,9 @@ class Executor(object):
         pub.publish(msg)
         
         
-    def action(self, spec, action_client, goal, verbose, wait):
+    def action(self, namespace, spec, action_client, goal, verbose, wait):
         
+        self.action_namespace = namespace
         self.spec = spec
         self.goal = goal
         self.verbose_action = verbose
@@ -467,9 +468,9 @@ class Executor(object):
     def goal_cb(self, status, result):
         
         if self.verbose_action and status == 3:
-            self.event_cb("Goal succeeded for action with spec '{}'".format(self.spec), "info", self.goal)
-        elif status == 2 or status == 6:
-            self.event_cb("Goal preempted for action with spec '{}'".format(self.spec), "warn", self.goal)
+            self.event_cb("Goal succeeded for '{}' action with specification '{}'".format(self.action_namespace, self.spec), "info", self.goal)
+        elif status == 2:
+            self.event_cb("Goal preempted for '{}' action with specification '{}'".format(self.action_namespace, self.spec), "warn", self.goal)
         elif status != 3:
-            self.event_cb("Goal failed for action with spec '{}'".format(self.spec), "warn", self.goal)
+            self.event_cb("Goal failed for '{}' action with specification '{}'. Status is {}".format(self.action_namespace, self.spec, status), "warn", self.goal)
 #####################################################################################
