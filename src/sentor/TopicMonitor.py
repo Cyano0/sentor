@@ -354,7 +354,9 @@ class TopicMonitor(Thread):
                     if rate is not None:
                         self.is_topic_published = True
                         
-                        self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = False
+                        if self.signal_when_cfg["signal_when"].lower() == 'not published':
+                            self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = False
+                            
                         if self.signal_when_cfg["safety_critical"]:
                             self.signal_when_is_safe = True
     
@@ -436,7 +438,8 @@ class TopicMonitor(Thread):
 
     def published_cb(self, msg):
         if not self._stop_event.isSet():
-            self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = True
+            if self.signal_when_cfg["signal_when"].lower() == 'published':
+                self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = True
             if self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
             if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
