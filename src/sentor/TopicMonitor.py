@@ -438,8 +438,7 @@ class TopicMonitor(Thread):
 
     def published_cb(self, msg):
         if not self._stop_event.isSet():
-            if self.signal_when_cfg["signal_when"].lower() == 'published':
-                self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = True
+            self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = True
             if self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
             if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
