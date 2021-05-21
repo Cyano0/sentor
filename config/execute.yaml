@@ -1,8 +1,8 @@
 # SEE THE README.MD FOR ARGUMENT DESCRIPTIONS
 
-- name: "/topological_navigation/feedback"
+- name: "/current_node"
   signal_lambdas:
-  - expression: "lambda msg: msg.feedback.route == 't1-r1-c1'"
+  - expression: "lambda msg: msg.data == 't1-r1-c1'"
     safety_critical: True
     process_indices: [0,1,2,3,4,5]
     repeat_exec: False
@@ -21,7 +21,7 @@
       message: "Navigating away from {}"
       level: warn
       msg_args:
-      - "msg.feedback.route"
+      - "msg.data"
   - action:
       verbose: True
       namespace: "/topological_navigation"

@@ -8,5 +8,5 @@ Created on Fri Nov 20 11:35:22 2020
 # SENTOR CUSTOM LAMBDA
 
 def CustomLambda(msg):
-    return msg.feedback.route == "t1-r1-c2"
+    return msg.data == "t1-r1-c2"
 #########################################################################################################
