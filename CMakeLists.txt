@@ -35,6 +35,7 @@ catkin_package(
 install(PROGRAMS
   scripts/sentor_node.py
   scripts/topic_mapping_node.py
+  scripts/test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
