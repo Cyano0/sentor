@@ -2,8 +2,8 @@
 Changelog for package sentor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.2.0 (2021-11-18)
+------------------
 * Merge pull request `#47 <https://github.com/LCAS/sentor/issues/47>`_ from adambinch/sentor_devel
   Node `test.py` publishes topics to test sentor functionality.
 * Node `test.py` publishes topics to test sentor functionality.
