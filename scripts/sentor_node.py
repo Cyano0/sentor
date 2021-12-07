@@ -31,14 +31,19 @@ event_pub = None
 rich_event_pub = None
 
 def __signal_handler(signum, frame):
+
     def kill_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.kill_monitor()
+
         safety_monitor.stop_monitor()
+        autonomy_monitor.stop_monitor()
         multi_monitor.stop_monitor()
+
     def join_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.join()
+
     kill_monitors()
     join_monitors()
     print "stopped."
@@ -50,6 +55,7 @@ def stop_monitoring(_):
         topic_monitor.stop_monitor()
         
     safety_monitor.stop_monitor()
+    autonomy_monitor.stop_monitor()
     multi_monitor.stop_monitor()
 
     rospy.logwarn("sentor_node stopped monitoring")
@@ -62,6 +68,7 @@ def start_monitoring(_):
         topic_monitor.start_monitor()
 
     safety_monitor.start_monitor()
+    autonomy_monitor.start_monitor()
     multi_monitor.start_monitor()
 
     rospy.logwarn("sentor_node started monitoring")
