@@ -11,6 +11,11 @@ import os, numpy, math
 from threading import Lock
 
 
+def _import(location, name):
+    mod = __import__(location, fromlist=[name]) 
+    return getattr(mod, name) 
+
+
 class Executor(object):
     
     
@@ -138,9 +143,9 @@ class Executor(object):
             package = process["action"]["package"]
             spec = process["action"]["action_spec"]
             
-            exec("from {}.msg import {} as action_spec".format(package, spec))
-            exec("from {}.msg import {} as goal_class".format(package, spec[:-6] + "Goal"))
-            
+            action_spec = _import(package+".msg", spec)
+            goal_class = _import(package+".msg", spec[:-6] + "Goal")
+
             rospy.sleep(1.0)
             
             action_client = actionlib.SimpleActionClient(namespace, action_spec)
@@ -308,7 +313,7 @@ class Executor(object):
             if "file" in process["custom"]:
                 _file = process["custom"]["file"]
             
-            exec("from {}.{} import {} as custom_proc".format(package, _file, name))
+            custom_proc = _import("{}.{}".format(package, _file), name)
             
             if "init_args" in process["custom"]:
                 args = process["custom"]["init_args"] 
