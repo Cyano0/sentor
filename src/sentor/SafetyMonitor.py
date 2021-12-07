@@ -15,14 +15,18 @@ from threading import Event
 class SafetyMonitor(object):
     
     
-    def __init__(self, timeout, rate, auto_tagging, event_cb):
+    def __init__(self, topic, attr, srv, event_cb):
         
+        timeout = rospy.get_param("~safe_operation_timeout", 10.0)
+        rate = rospy.get_param("~safety_pub_rate", 10.0)
+        self.auto_tagging = rospy.get_param("~auto_safety_tagging", True)
+
         if timeout > 0:
             self.timeout = timeout
         else:
             self.timeout = 0.1
         
-        self.auto_tagging = auto_tagging
+        self.attr = attr
         self.event_cb = event_cb
         self.topic_monitors = []
         
@@ -33,10 +37,16 @@ class SafetyMonitor(object):
         
         self._stop_event = Event()
 
-        self.safety_pub = rospy.Publisher('/safe_operation', Bool, queue_size=10)
+        event_msg = ""
+        items = topic.split("_")
+        for item in items:
+            event_msg = event_msg + " " + item
+        self.event_msg = event_msg[1:] + ": "
+
+        self.safety_pub = rospy.Publisher(topic, Bool, queue_size=10)
         rospy.Timer(rospy.Duration(1.0/rate), self.safety_pub_cb)
         
-        rospy.Service('/sentor/set_safety_tag', SetBool, self.set_safety_tag)
+        rospy.Service("/sentor/" + srv, SetBool, self.srv_cb)
 
 
     def register_monitors(self, topic_monitor):
@@ -48,7 +58,7 @@ class SafetyMonitor(object):
         if not self._stop_event.isSet():
 
             if self.topic_monitors:
-                threads_are_safe = [monitor.thread_is_safe for monitor in self.topic_monitors]
+                threads_are_safe = [getattr(monitor, self.attr) for monitor in self.topic_monitors]
                 
                 if self.auto_tagging and all(threads_are_safe) and self.timer is None:
                     self.timer = rospy.Timer(rospy.Duration.from_sec(self.timeout), self.timer_cb, oneshot=True)
@@ -60,7 +70,7 @@ class SafetyMonitor(object):
 
                     self.safe_operation = False                        
                     if not self.unsafe_msg_sent:
-                        self.event_cb("SAFE OPERATION: FALSE", "error")
+                        self.event_cb(self.event_msg.upper() + "FALSE", "error")
                         self.safe_msg_sent = False
                         self.unsafe_msg_sent = True
                         
@@ -71,18 +81,18 @@ class SafetyMonitor(object):
         
         self.safe_operation = True
         if not self.safe_msg_sent:
-            self.event_cb("SAFE OPERATION: TRUE", "info")
+            self.event_cb(self.event_msg.upper() + "TRUE", "info")
             self.safe_msg_sent = True
             self.unsafe_msg_sent = False
                                        
         
-    def set_safety_tag(self, req):
+    def srv_cb(self, req):
         
         self.safe_operation = req.data        
         
         ans = SetBoolResponse()
         ans.success = True
-        ans.message = "safe operation: {}".format(req.data)
+        ans.message = self.event_msg + "{}".format(req.data)
         
         return ans
         

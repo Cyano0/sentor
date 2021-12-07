@@ -14,7 +14,9 @@ from threading import Event
 class MultiMonitor(object):
     
     
-    def __init__(self, rate=10):
+    def __init__(self):
+
+        rate = rospy.get_param("~safety_pub_rate", 10.0) 
         
         self.topic_monitors = []
         self._stop_event = Event()
@@ -49,6 +51,7 @@ class MultiMonitor(object):
                         condition.topic = topic_name
                         condition.condition = expr
                         condition.safety_critical = monitor.conditions[expr]["safety_critical"]
+                        condition.autonomy_critical = monitor.conditions[expr]["autonomy_critical"]
                         condition.satisfied = self.error_code[count]
                         condition.tags = monitor.conditions[expr]["tags"]
                         conditions.conditions.append(condition)
