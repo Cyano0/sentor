@@ -8,6 +8,11 @@ from __future__ import division
 import rospy, math, numpy
 # imported the packages math and numpy so that they can be used in the lambda expressions
 
+def _import(location, name):
+    mod = __import__(location, fromlist=[name]) 
+    return getattr(mod, name) 
+
+
 class ROSTopicFilter(object):
 
     def __init__(self, topic_name, lambda_fn_str, config, throttle_val):
@@ -21,8 +26,7 @@ class ROSTopicFilter(object):
         self.lambda_fn = None
         try:
             if config["file"] is not None and config["package"] is not None:
-                exec("from {}.{} import {} as lambda_fn".format(config["package"], config["file"], self.lambda_fn_str))
-                self.lambda_fn = lambda_fn
+                self.lambda_fn = _import("{}.{}".format(config["package"], config["file"]), self.lambda_fn_str)
             else:
                 self.lambda_fn = eval(self.lambda_fn_str)
         except Exception as e:
