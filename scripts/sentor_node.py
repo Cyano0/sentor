@@ -31,14 +31,19 @@ event_pub = None
 rich_event_pub = None
 
 def __signal_handler(signum, frame):
+
     def kill_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.kill_monitor()
+
         safety_monitor.stop_monitor()
+        autonomy_monitor.stop_monitor()
         multi_monitor.stop_monitor()
+
     def join_monitors():
         for topic_monitor in topic_monitors:
             topic_monitor.join()
+
     kill_monitors()
     join_monitors()
     print "stopped."
@@ -50,6 +55,7 @@ def stop_monitoring(_):
         topic_monitor.stop_monitor()
         
     safety_monitor.stop_monitor()
+    autonomy_monitor.stop_monitor()
     multi_monitor.stop_monitor()
 
     rospy.logwarn("sentor_node stopped monitoring")
@@ -62,6 +68,7 @@ def start_monitoring(_):
         topic_monitor.start_monitor()
 
     safety_monitor.start_monitor()
+    autonomy_monitor.start_monitor()
     multi_monitor.start_monitor()
 
     rospy.logwarn("sentor_node started monitoring")
@@ -109,12 +116,9 @@ if __name__ == "__main__":
 
     event_pub = rospy.Publisher('/sentor/event', String, queue_size=10)
     rich_event_pub = rospy.Publisher('/sentor/rich_event', SentorEvent, queue_size=10)
-
-    safe_operation_timeout = rospy.get_param("~safe_operation_timeout", 10.0)    
-    safety_pub_rate = rospy.get_param("~safety_pub_rate", 10.0)    
-    auto_safety_tagging = rospy.get_param("~auto_safety_tagging", True)        
-    safety_monitor = SafetyMonitor(safe_operation_timeout, safety_pub_rate, auto_safety_tagging, event_callback) 
     
+    safety_monitor = SafetyMonitor("safe_operation", "thread_is_safe", "set_safety_tag", event_callback)
+    autonomy_monitor = SafetyMonitor("safe_autonomous_operation", "thread_is_auto", "set_autonomy_tag", event_callback)
     multi_monitor = MultiMonitor()
 
     topic_monitors = []
@@ -162,6 +166,7 @@ if __name__ == "__main__":
 
         topic_monitors.append(topic_monitor)
         safety_monitor.register_monitors(topic_monitor)
+        autonomy_monitor.register_monitors(topic_monitor)
         multi_monitor.register_monitors(topic_monitor)
             
     time.sleep(1)

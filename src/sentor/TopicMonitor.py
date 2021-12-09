@@ -54,6 +54,7 @@ class TopicMonitor(Thread):
         
         self.nodes = []
         self.sat_crit_expressions = []
+        self.sat_auto_expressions = []
         self.sat_expressions_timer = {}
         self.sat_expr_repeat_timer = {}
         self.conditions = {}
@@ -70,10 +71,16 @@ class TopicMonitor(Thread):
         self.is_instantiated = False
         self.is_instantiated = self._instantiate_monitors()
         
+        self.independent_tags = rospy.get_param("~independent_tags", False)
+        
         self.signal_when_is_safe = True
         self.lambdas_are_safe = True
         self.thread_is_safe = True
         
+        self.signal_when_is_auto = True
+        self.lambdas_are_auto = True
+        self.thread_is_auto = True
+
         if processes:
             self.executor = Executor(processes, self.event_callback)
 
@@ -175,6 +182,7 @@ class TopicMonitor(Thread):
         self.signal_when_cfg["signal_when"] = ""
         self.signal_when_cfg["timeout"] = self.timeout
         self.signal_when_cfg["safety_critical"] = False
+        self.signal_when_cfg["autonomy_critical"] = False
         self.signal_when_cfg["default_notifications"] = self.default_notifications
         self.signal_when_cfg["process_indices"] = None
         self.signal_when_cfg["repeat_exec"] = False
@@ -191,6 +199,8 @@ class TopicMonitor(Thread):
                 self.signal_when_cfg["timeout"] = self.signal_when_config["timeout"]
             if "safety_critical" in self.signal_when_config:
                 self.signal_when_cfg["safety_critical"] = self.signal_when_config["safety_critical"]
+            if "autonomy_critical" in self.signal_when_config:
+                self.signal_when_cfg["autonomy_critical"] = self.signal_when_config["autonomy_critical"]
             if "default_notifications" in self.signal_when_config:
                 self.signal_when_cfg["default_notifications"] = self.signal_when_config["default_notifications"]
             if "process_indices" in self.signal_when_config:
@@ -211,6 +221,7 @@ class TopicMonitor(Thread):
             d = {}
             d["satisfied"] = False
             d["safety_critical"] = self.signal_when_cfg["safety_critical"]
+            d["autonomy_critical"] = self.signal_when_cfg["autonomy_critical"]
             d["tags"] = self.signal_when_cfg["tags"]
             self.conditions[self.signal_when_cfg["signal_when"]] = d
             
@@ -223,6 +234,7 @@ class TopicMonitor(Thread):
         lambda_config["package"] = None
         lambda_config["timeout"] = self.timeout
         lambda_config["safety_critical"] = False
+        lambda_config["autonomy_critical"] = False
         lambda_config["default_notifications"] = self.default_notifications
         lambda_config["when_published"] = False
         lambda_config["process_indices"] = None
@@ -239,7 +251,9 @@ class TopicMonitor(Thread):
         if "timeout" in signal_lambda:
             lambda_config["timeout"] = signal_lambda["timeout"]
         if "safety_critical" in signal_lambda:
-            lambda_config["safety_critical"] = signal_lambda["safety_critical"]                
+            lambda_config["safety_critical"] = signal_lambda["safety_critical"]
+        if "autonomy_critical" in signal_lambda:
+            lambda_config["autonomy_critical"] = signal_lambda["autonomy_critical"]
         if "default_notifications" in signal_lambda:
             lambda_config["default_notifications"] = signal_lambda["default_notifications"]    
         if "when_published" in signal_lambda:
@@ -261,6 +275,7 @@ class TopicMonitor(Thread):
             d = {}
             d["satisfied"] = False
             d["safety_critical"] = lambda_config["safety_critical"]
+            d["autonomy_critical"] = lambda_config["autonomy_critical"]
             d["tags"] = lambda_config["tags"]
             self.conditions[lambda_config["expr"]] = d
             
@@ -321,6 +336,8 @@ class TopicMonitor(Thread):
                 
                 if self.signal_when_cfg["safety_critical"]:
                     self.signal_when_is_safe = False
+                if self.signal_when_cfg["autonomy_critical"]:
+                    self.signal_when_is_auto = False
                 if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
                     self.event_callback("SAFETY CRITICAL: Topic %s is not published anymore" % self.topic_name, "error")
                 elif self.signal_when_cfg["default_notifications"]:
@@ -338,6 +355,10 @@ class TopicMonitor(Thread):
             while not self._stop_event.isSet():
                 
                 self.thread_is_safe = self.signal_when_is_safe and self.lambdas_are_safe
+                if not self.independent_tags:
+                    self.thread_is_auto = self.thread_is_safe and self.signal_when_is_auto and self.lambdas_are_auto
+                else:
+                    self.thread_is_auto = self.signal_when_is_auto and self.lambdas_are_auto
                 
                 # check it is still published (None if not)
                 if self.hz_monitor is not None:
@@ -359,6 +380,9 @@ class TopicMonitor(Thread):
                             
                         if self.signal_when_cfg["safety_critical"]:
                             self.signal_when_is_safe = True
+
+                        if self.signal_when_cfg["autonomy_critical"]:
+                            self.signal_when_is_auto = True
     
                         if timer is not None:
                             timer.shutdown()
@@ -392,6 +416,10 @@ class TopicMonitor(Thread):
                             self.lambdas_are_safe = False
                             self.sat_crit_expressions.append(config["expr"])
                             
+                        if config["autonomy_critical"]:
+                            self.lambdas_are_auto = False
+                            self.sat_auto_expressions.append(config["expr"])
+
                         self.conditions[config["expr"]]["satisfied"] = True
                         if config["default_notifications"]:
                             if config["safety_critical"]:
@@ -432,8 +460,14 @@ class TopicMonitor(Thread):
             if expr in self.sat_crit_expressions:
                 self.sat_crit_expressions.remove(expr)
                 
+            if expr in self.sat_auto_expressions:
+                self.sat_auto_expressions.remove(expr)
+
             if not self.sat_crit_expressions:
                 self.lambdas_are_safe = True
+
+            if not self.sat_auto_expressions:
+                self.lambdas_are_auto = True
 
 
     def published_cb(self, msg):
@@ -441,6 +475,8 @@ class TopicMonitor(Thread):
             self.conditions[self.signal_when_cfg["signal_when"]]["satisfied"] = True
             if self.signal_when_cfg["safety_critical"]:
                 self.signal_when_is_safe = False
+            if self.signal_when_cfg["autonomy_critical"]:
+                self.signal_when_is_auto = False
             if self.signal_when_cfg["default_notifications"] and self.signal_when_cfg["safety_critical"]:
                 self.event_callback("SAFETY CRITICAL: Topic %s is published " % (self.topic_name), "error")
             elif self.signal_when_cfg["default_notifications"]:
