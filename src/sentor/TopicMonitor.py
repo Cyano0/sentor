@@ -71,6 +71,8 @@ class TopicMonitor(Thread):
         self.is_instantiated = False
         self.is_instantiated = self._instantiate_monitors()
         
+        self.independent_tags = rospy.get_param("~independent_tags", False)
+        
         self.signal_when_is_safe = True
         self.lambdas_are_safe = True
         self.thread_is_safe = True
@@ -353,7 +355,10 @@ class TopicMonitor(Thread):
             while not self._stop_event.isSet():
                 
                 self.thread_is_safe = self.signal_when_is_safe and self.lambdas_are_safe
-                self.thread_is_auto = self.thread_is_safe and self.signal_when_is_auto and self.lambdas_are_auto
+                if not self.independent_tags:
+                    self.thread_is_auto = self.thread_is_safe and self.signal_when_is_auto and self.lambdas_are_auto
+                else:
+                    self.thread_is_auto = self.signal_when_is_auto and self.lambdas_are_auto
                 
                 # check it is still published (None if not)
                 if self.hz_monitor is not None:
