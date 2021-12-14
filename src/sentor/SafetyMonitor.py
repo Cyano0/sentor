@@ -38,8 +38,7 @@ class SafetyMonitor(object):
         self._stop_event = Event()
 
         event_msg = ""
-        items = topic.split("_")
-        for item in items:
+        for item in topic.split("_"):
             event_msg = event_msg + " " + item
         self.event_msg = event_msg[1:] + ": "
 
