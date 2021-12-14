@@ -51,25 +51,7 @@ class TopicMonitor(Thread):
         self.default_notifications = default_notifications
         self._event_callback = event_callback
         self.thread_num = thread_num
-        
-        self.nodes = []
-        self.sat_crit_expressions = []
-        self.sat_auto_expressions = []
-        self.sat_expressions_timer = {}
-        self.sat_expr_repeat_timer = {}
-        self.conditions = {}
-        
         self.process_signal_config()
-        
-        self._stop_event = Event()
-        self._killed_event = Event()
-        self._lock = Lock()
-        
-        self.pub_monitor = None
-        self.hz_monitor = None
-        self.is_topic_published = True 
-        self.is_instantiated = False
-        self.is_instantiated = self._instantiate_monitors()
         
         self.independent_tags = rospy.get_param("~independent_tags", False)
         
@@ -80,9 +62,26 @@ class TopicMonitor(Thread):
         self.signal_when_is_auto = True
         self.lambdas_are_auto = True
         self.thread_is_auto = True
-
+        
+        self.nodes = []
+        self.sat_crit_expressions = []
+        self.sat_auto_expressions = []
+        self.sat_expressions_timer = {}
+        self.sat_expr_repeat_timer = {}
+        self.conditions = {}
+        
         if processes:
             self.executor = Executor(processes, self.event_callback)
+        
+        self._stop_event = Event()
+        self._killed_event = Event()
+        self._lock = Lock()
+        
+        self.pub_monitor = None
+        self.hz_monitor = None
+        self.is_topic_published = True 
+        self.is_instantiated = False
+        self.is_instantiated = self._instantiate_monitors()
 
 
     def _instantiate_monitors(self):
