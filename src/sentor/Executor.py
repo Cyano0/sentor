@@ -30,7 +30,7 @@ class Executor(object):
         
         for process in config:
             
-            process_type = process.keys()[0]
+            process_type = list(process.keys())[0]
             
             if process_type == "call":
                 self.init_call(process)
@@ -429,7 +429,7 @@ class Executor(object):
                      stderr=subprocess.PIPE)
                      
         stdout, stderr = process.communicate()
-        print stdout
+        print(stdout)
         
         if stderr:
             self.event_cb("Unable to execute shell commands {}: {}".format(cmd_args, stderr), "warn")

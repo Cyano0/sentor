@@ -137,7 +137,7 @@ class TopicMonitor(Thread):
             self.hz_monitor = self._instantiate_hz_monitor(subscribed_topic, self.topic_name, msg_class)
 
         if self.signal_when_cfg["signal_when"].lower() == 'published':
-            print "Signaling 'published' for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
+            print("Signaling 'published' for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized")
             self.pub_monitor = self._instantiate_pub_monitor(subscribed_topic, self.topic_name, msg_class)
             self.pub_monitor.register_published_cb(self.published_cb)
             
@@ -145,10 +145,10 @@ class TopicMonitor(Thread):
                 self.signal_when_is_safe = False
 
         elif self.signal_when_cfg["signal_when"].lower() == 'not published':
-            print "Signaling 'not published' for "+ bcolors.BOLD + str(self.signal_when_cfg["timeout"]) + " seconds" + bcolors.ENDC +" for " + bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized"
+            print("Signaling 'not published' for "+ bcolors.BOLD + str(self.signal_when_cfg["timeout"]) + " seconds" + bcolors.ENDC +" for " + bcolors.OKBLUE + self.topic_name + bcolors.ENDC +" initialized")
 
         if len(self.signal_lambdas_config):
-            print "Signaling expressions for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + ":"
+            print("Signaling expressions for "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + ":")
             
             self.lambda_monitor_list = []
             for signal_lambda in self.signal_lambdas_config:
@@ -157,7 +157,7 @@ class TopicMonitor(Thread):
                 lambda_config = self.process_lambda_config(signal_lambda)
                 
                 if lambda_fn_str != "":
-                    print "\t" + bcolors.OKGREEN + lambda_fn_str + bcolors.ENDC + " ("+ bcolors.BOLD+"timeout: %s seconds" %  lambda_config["timeout"] + bcolors.ENDC +")"
+                    print("\t" + bcolors.OKGREEN + lambda_fn_str + bcolors.ENDC + " ("+ bcolors.BOLD+"timeout: %s seconds" %  lambda_config["timeout"] + bcolors.ENDC +")")
                     lambda_monitor = self._instantiate_lambda_monitor(subscribed_topic, msg_class, lambda_fn_str, lambda_config)
 
                     # register cb that notifies when the lambda function is True
@@ -165,7 +165,7 @@ class TopicMonitor(Thread):
                     lambda_monitor.register_unsatisfied_cb(self.lambda_unsatisfied_cb)
 
                     self.lambda_monitor_list.append(lambda_monitor)
-            print ""
+            print("")
 
         self.is_instantiated = True
 

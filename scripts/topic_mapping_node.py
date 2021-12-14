@@ -23,7 +23,7 @@ def __signal_handler(signum, frame):
             topic_mapper.join()
     kill_mappers()
     join_mappers()
-    print "stopped."
+    print("stopped.")
     os._exit(signal.SIGTERM)
 ##########################################################################################
     
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         topics = []
     
     topic_mappers = []
-    print "Mapping topics:"
+    print("Mapping topics:")
     for i, topic in enumerate(topics):
         try:
             topic_name = topic["name"]
