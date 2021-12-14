@@ -46,7 +46,7 @@ def __signal_handler(signum, frame):
 
     kill_monitors()
     join_monitors()
-    print "stopped."
+    print("stopped.")
     os._exit(signal.SIGTERM)
     
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     config_file = rospy.get_param("~config_file", "")
     try:
-        items = [yaml.load(file(item, 'r')) for item in config_file.split(',')]
+        items = [yaml.load(open(item, 'r')) for item in config_file.split(',')]
         topics = [item for sublist in items for item in sublist]
     except Exception as e:
         rospy.logerr("No configuration file provided: %s" % e)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     multi_monitor = MultiMonitor()
 
     topic_monitors = []
-    print "Monitoring topics:"
+    print("Monitoring topics:")
     for i, topic in enumerate(topics):
         
         include = True

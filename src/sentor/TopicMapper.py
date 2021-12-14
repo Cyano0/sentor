@@ -168,7 +168,7 @@ class TopicMapper(Thread):
             rospy.logerr("Topic {} is not published".format(self.topic_name))
             return False
         
-        print "Mapping topic arg "+ bcolors.OKGREEN + self.config["arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n'
+        print("Mapping topic arg "+ bcolors.OKGREEN + self.config["arg"] + bcolors.ENDC +" on topic "+ bcolors.OKBLUE + self.topic_name + bcolors.ENDC + '\n')
         
         rate = 0
         if "rate" in self.config:

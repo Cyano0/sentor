@@ -10,8 +10,8 @@ Created on Mon Nov 23 16:26:27 2020
 class CustomProcess(object):
     
     def __init__(self, message):
-        print message
+        print(message)
         
     def run(self, message):
-        print message
+        print(message)
 #########################################################################################################
