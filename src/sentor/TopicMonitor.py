@@ -51,7 +51,6 @@ class TopicMonitor(Thread):
         self.default_notifications = default_notifications
         self._event_callback = event_callback
         self.thread_num = thread_num
-        self.process_signal_config()
         
         self.independent_tags = rospy.get_param("~independent_tags", False)
         
@@ -69,7 +68,9 @@ class TopicMonitor(Thread):
         self.sat_expressions_timer = {}
         self.sat_expr_repeat_timer = {}
         self.conditions = {}
-        
+
+        self.process_signal_config()
+
         if processes:
             self.executor = Executor(processes, self.event_callback)
         
