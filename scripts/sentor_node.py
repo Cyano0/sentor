@@ -117,8 +117,8 @@ if __name__ == "__main__":
     event_pub = rospy.Publisher('/sentor/event', String, queue_size=10)
     rich_event_pub = rospy.Publisher('/sentor/rich_event', SentorEvent, queue_size=10)
     
-    safety_monitor = SafetyMonitor("safe_operation", "thread_is_safe", "set_safety_tag", event_callback)
-    autonomy_monitor = SafetyMonitor("safe_autonomous_operation", "thread_is_auto", "set_autonomy_tag", event_callback)
+    safety_monitor = SafetyMonitor("safe_operation", "SAFE OPERATION", "thread_is_safe", "set_safety_tag", event_callback)
+    autonomy_monitor = SafetyMonitor("pause_autonomous_operation", "SAFE AUTONOMOUS OPERATION", "thread_is_auto", "set_autonomy_tag", event_callback, invert=True)
     multi_monitor = MultiMonitor()
 
     topic_monitors = []
