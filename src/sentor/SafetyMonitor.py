@@ -15,7 +15,7 @@ from threading import Event
 class SafetyMonitor(object):
     
     
-    def __init__(self, topic, attr, srv, event_cb):
+    def __init__(self, topic, event_msg, attr, srv, event_cb, invert=False):
         
         timeout = rospy.get_param("~safe_operation_timeout", 10.0)
         rate = rospy.get_param("~safety_pub_rate", 10.0)
@@ -28,6 +28,7 @@ class SafetyMonitor(object):
         
         self.attr = attr
         self.event_cb = event_cb
+        self.invert = invert
         self.topic_monitors = []
         
         self.timer = None
@@ -37,10 +38,7 @@ class SafetyMonitor(object):
         
         self._stop_event = Event()
 
-        event_msg = ""
-        for item in topic.split("_"):
-            event_msg = event_msg + " " + item
-        self.event_msg = event_msg[1:] + ": "
+        self.event_msg = event_msg + ": "
 
         self.safety_pub = rospy.Publisher(topic, Bool, queue_size=10)
         rospy.Timer(rospy.Duration(1.0/rate), self.safety_pub_cb)
@@ -69,18 +67,21 @@ class SafetyMonitor(object):
 
                     self.safe_operation = False                        
                     if not self.unsafe_msg_sent:
-                        self.event_cb(self.event_msg.upper() + "FALSE", "error")
+                        self.event_cb(self.event_msg + "FALSE", "error")
                         self.safe_msg_sent = False
                         self.unsafe_msg_sent = True
-                        
-                self.safety_pub.publish(Bool(self.safe_operation))
-                
-                
+
+                if self.invert:
+                    self.safety_pub.publish(Bool(not self.safe_operation))       
+                else:
+                    self.safety_pub.publish(Bool(self.safe_operation))
+
+
     def timer_cb(self, event=None):
         
         self.safe_operation = True
         if not self.safe_msg_sent:
-            self.event_cb(self.event_msg.upper() + "TRUE", "info")
+            self.event_cb(self.event_msg + "TRUE", "info")
             self.safe_msg_sent = True
             self.unsafe_msg_sent = False
                                        
