@@ -66,11 +66,11 @@
   default_notifications: False
 
 
-- name: "/safe_autonomous_operation"
+- name: "/pause_autonomous_operation"
   signal_lambdas:
-    - expression: "lambda msg : msg.data == False"
-      process_indices: [0]
     - expression: "lambda msg : msg.data == True"
+      process_indices: [0]
+    - expression: "lambda msg : msg.data == False"
       process_indices: [1]
   execute:
   - log:
