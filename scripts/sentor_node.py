@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     config_file = rospy.get_param("~config_file", "")
     try:
-        items = [yaml.load(open(item, 'r')) for item in config_file.split(',')]
+        items = [yaml.load(open(item, 'r') , Loader=yaml.FullLoader) for item in config_file.split(',')]
         topics = [item for sublist in items for item in sublist]
     except Exception as e:
         rospy.logerr("No configuration file provided: %s" % e)
