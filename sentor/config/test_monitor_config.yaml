@@ -1,0 +1,70 @@
+monitors:
+#   - name: "/example_topic"
+#     message_type: "std_msgs/msg/Int32"
+#     rate: 10  # optional throttling (messages per second)
+#     N: 5
+#     qos:
+#       reliability: "reliable"
+#       durability: "volatile"
+#       depth: 10
+#     signal_when:
+#       condition: "published"
+#       timeout: 2.0
+#       safety_critical: false
+#     signal_lambdas:
+#       - expression: "lambda x: x.data > 10"
+#         timeout: 3.0
+#         safety_critical: true
+#         autonomy_critical: false
+#         tags: ["example"]
+#     execute: []
+#     default_notifications: true
+
+  - name: "/example_topic"
+    message_type: "std_msgs/msg/Int32"
+    rate: 10
+    N: 5
+    qos:
+      reliability: "reliable"
+      durability: "volatile"
+      depth: 10
+    signal_when:
+      condition: "published"
+      timeout: 2.0
+      safety_critical: false
+    signal_lambdas:
+      - expression: "lambda x: x.data > 10"
+        timeout: 3.0
+        safety_critical: true
+        autonomy_critical: false
+        tags: ["example"]
+        process_indices: [0]   # Add process indices here
+    execute:
+      - log:
+          message: "Lambda condition met: value > 10 on /example_topic"
+          level: "warn"
+    default_notifications: true
+    enable_internal_logs: false
+
+  - name: "/test_topic_2"
+    message_type: "sensor_msgs/msg/Temperature"
+    rate: 2
+    N: 5
+    qos:
+      reliability: "best_effort"
+      durability: "transient_local"
+      depth: 5
+    signal_when:
+      condition: "published"
+      timeout: 2
+      safety_critical: False
+    signal_lambdas:
+      - expression: "lambda x: x.temperature < 15"
+        timeout: 2
+        safety_critical: True
+    execute: []
+    timeout: 10
+    default_notifications: False
+
+
+
