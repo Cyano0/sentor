@@ -30,11 +30,15 @@ class ROSTopicFilter:
         self.unsat_callbacks = []
 
         # Compile lambda function
-        try:
-            self.lambda_fn = eval(self.lambda_fn_str)
-        except Exception as e:
-            self.node.get_logger().error(f"[ROSTopicFilter] Lambda error: {e}")
-            self.lambda_fn = None
+        if isinstance(self.lambda_fn_str, str):
+            try:
+                self.lambda_fn = eval(self.lambda_fn_str)
+            except Exception as e:
+                self.node.get_logger().error(f"[ROSTopicFilter] Lambda error: {e}")
+                self.lambda_fn = None
+        else:
+            # If it's already a callable (e.g. imported custom lambda), just assign it.
+            self.lambda_fn = self.lambda_fn_str
 
         # Detect message type
         self.msg_type = self.get_message_type(self.topic_name)

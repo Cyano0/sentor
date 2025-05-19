@@ -1,15 +1,27 @@
+#!/usr/bin/env python3
+"""
+@author: Francesco Del Duchetto (FDelDuchetto@lincoln.ac.uk)
+@author: Adam Binch (abinch@sagarobotics.com)
+
+Converted from ROS1 to ROS2 2025
+@author: Zhuoling Huang
+"""
+#####################################################################################
 from threading import Thread, Event, Lock
+import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from rclpy.timer import Timer
 from sentor.ROSTopicFilter import ROSTopicFilter
-from sentor.ROSTopicHz import ROSTopicHz
-from sentor.ROSTopicPub import ROSTopicPub
-from sentor.Executor import Executor
-import time
+from sentor.ROSTopicHz     import ROSTopicHz
+from sentor.ROSTopicPub    import ROSTopicPub
+from sentor.Executor       import Executor
 
 class TopicMonitor(Thread):
+    def debug(self, msg):
+        if getattr(self, 'enable_internal_logs', False) and hasattr(self, 'node'):
+            self.node.get_logger().info(msg)
+
     def __init__(
         self,
         topic_name,
@@ -24,222 +36,178 @@ class TopicMonitor(Thread):
         default_notifications,
         event_callback,
         thread_num,
-        enable_internal_logs=True   # <-- new optional param
+        enable_internal_logs=True
     ):
-        """
-        :param enable_internal_logs: If True, prints extra developer logs (like 'Lambda satisfied' traces).
-        """
-        super().__init__()
-
-        # Basic fields
-        self.topic_name = topic_name
-        self.msg_type = msg_type
-        self.qos_profile = qos_profile
-        self.rate = rate
-        self.N = N
-        self.signal_when_config = signal_when_config
+        super().__init__(daemon=True)
+        self.topic_name            = topic_name
+        self.msg_type              = msg_type
+        self.qos_profile           = qos_profile
+        self.rate                  = rate
+        self.N                     = N
+        self.signal_when_config    = signal_when_config
         self.signal_lambdas_config = signal_lambdas_config
-        self.processes = processes
-        self.timeout = timeout if timeout > 0 else 0.1
+        self.processes             = processes
+        self.timeout               = timeout if timeout>0 else 0.1
         self.default_notifications = default_notifications
-        self._event_callback = event_callback
-        self.thread_num = thread_num
+        self._event_callback       = event_callback
+        self.thread_num            = thread_num
+        self.enable_internal_logs  = enable_internal_logs
 
-        # Developer log toggle
-        self.enable_internal_logs = enable_internal_logs
+        # internal state
+        self._stop_event   = Event()
+        self._lock         = Lock()
+        self.conditions    = {}
+        self.sat_expr_timer= {}
+        self.is_alive      = False
+        self.is_autonomy_alive = False
 
-        # Thread-control + concurrency
-        self._stop_event = Event()
-        self._lock = Lock()
+        # last‐message timestamp for any‐message callback
+        self._last_msg_time = time.time()
 
-        # Condition tracking
-        self.conditions = {}
-        self.sat_expr_timer = {}
-
-        # Create the ROS2 Node
+        # ROS node for this monitor
         self.node = Node(f"topic_monitor_{thread_num}")
-        self.debug(f"[TopicMonitor] Created for topic: {self.topic_name}")
+        self.debug(f"[TopicMonitor] Created for {self.topic_name}")
 
-        # QoS fallback
+        # fallback QoS
         if self.qos_profile is None:
-            self.node.get_logger().warn(f"[TopicMonitor] No QoS profile for {self.topic_name}, using fallback QoS")
+            self.node.get_logger().warn(f"[TopicMonitor] No QoS for {self.topic_name}, using fallback")
             self.qos_profile = QoSProfile(
                 reliability=ReliabilityPolicy.RELIABLE,
                 history=HistoryPolicy.KEEP_LAST,
                 depth=10
             )
 
-        # Optionally set up an Executor if needed
-        if processes:
-            self.executor = Executor(processes, event_callback)
-        else:
-            self.executor = None
+        # thread‐safe executor for any “processes”
+        self.executor = Executor(processes, event_callback) if processes else None
 
-        # Parse signal_when config
+        # --- THIS WAS MISSING in your version! ----------------------------
+        # Build self.signal_when_cfg and seed self.conditions for “signal_when”
         self.process_signal_config()
+        # ------------------------------------------------------------------
 
-        # Create ROSTopicHz for frequency monitoring
-        self.hz_monitor = ROSTopicHz(self.node, self.topic_name, 1000, self.N)
+        # frequency monitoring
+        self.hz_monitor = ROSTopicHz(self.node, self.topic_name, window_size=1000, throttle_val=self.N)
         self.hz_monitor.start_monitoring(self.msg_type, self.qos_profile)
 
-        # Periodically log frequency
+        # periodic status checks
         self.node.create_timer(5.0, self.log_hz_stats)
+        self.node.create_timer(1.0, self.check_not_published)
+        self.node.create_timer(1.0, self._check_alive_status)
+        self.node.create_timer(1.0, self._check_autonomy_status)
 
-        # Set up ROSTopicPub if signal_when == "published"
-        if self.signal_when_cfg.get("signal_when", "").lower() == "published":
-            self.debug(f"[TopicMonitor] Setting up ROSTopicPub for {self.topic_name}")
-            self.pub_monitor = ROSTopicPub(
+        # subscribe to update “last_msg_time”
+        self.node.create_subscription(
+            self.msg_type,
+            self.topic_name,
+            self._on_any_msg,
+            self.qos_profile
+        )
+
+        # “published”‐condition via ROSTopicPub
+        if self.signal_when_cfg.get("signal_when","").lower() == "published":
+            self.debug(f"Setting up ROSTopicPub for {self.topic_name}")
+            pubm = ROSTopicPub(
                 node=self.node,
                 topic_name=self.topic_name,
                 msg_type=self.msg_type,
                 qos_profile=self.qos_profile,
-                throttle_val=self.N
+                throttle_val=1
             )
-            self.pub_monitor.register_published_cb(self.published_cb)
+            pubm.register_published_cb(self.published_cb)
 
-        # Build lambda filters
-        for i, signal_lambda in enumerate(self.signal_lambdas_config):
-            config = self.process_lambda_config(signal_lambda)
-            expr = config["expr"]
-
-            # Track condition
-            self.conditions[expr] = {
+        # per‐lambda filters
+        for lam in self.signal_lambdas_config:
+            cfg = self.process_lambda_config(lam)
+            key = cfg["original_expr"]
+            self.conditions[key] = {
                 "satisfied": False,
-                "safety_critical": config["safety_critical"],
-                "autonomy_critical": config["autonomy_critical"],
-                "tags": config.get("tags", [])
+                "safety_critical":   cfg["safety_critical"],
+                "autonomy_critical": cfg["autonomy_critical"],
+                "tags": cfg.get("tags", []),
             }
-
-            # Create ROSTopicFilter
-            filter_monitor = ROSTopicFilter(
-                self.node, self.topic_name, expr, config, throttle_val=self.N,
-            )
-            filter_monitor.register_satisfied_cb(self.lambda_satisfied_cb)
-            filter_monitor.register_unsatisfied_cb(self.lambda_unsatisfied_cb)
-
-    def debug(self, msg):
-        """Helper method: only logs if enable_internal_logs=True."""
-        if self.enable_internal_logs:
-            self.node.get_logger().info(msg)
+            fm = ROSTopicFilter(self.node, self.topic_name, cfg["expr"], cfg, throttle_val=self.N)
+            fm.register_satisfied_cb(self.lambda_satisfied_cb)
+            fm.register_unsatisfied_cb(self.lambda_unsatisfied_cb)
 
     def process_signal_config(self):
-        """Parses the 'signal_when_config' to fill up self.signal_when_cfg dict and create conditions."""
+        """Initialize self.signal_when_cfg & seed self.conditions for the ‘signal_when’ check."""
+        cfg = self.signal_when_config or {}
         self.signal_when_cfg = {
-            "signal_when": self.signal_when_config.get("condition", ""),
-            "timeout": self.signal_when_config.get("timeout", self.timeout),
-            "safety_critical": self.signal_when_config.get("safety_critical", False),
-            "autonomy_critical": self.signal_when_config.get("autonomy_critical", False),
-            "default_notifications": self.signal_when_config.get("default_notifications", self.default_notifications),
-            "tags": self.signal_when_config.get("tags", [])
+            "signal_when":       cfg.get("condition", ""),
+            "timeout":           max(cfg.get("timeout", self.timeout), 0.1),
+            "safety_critical":   cfg.get("safety_critical", False),
+            "autonomy_critical": cfg.get("autonomy_critical", False),
+            "default_notifications": cfg.get("default_notifications", self.default_notifications),
+            "tags": cfg.get("tags", []),
         }
-        if self.signal_when_cfg["timeout"] <= 0:
-            self.signal_when_cfg["timeout"] = self.timeout
-
-        # If there's a condition, create an entry in self.conditions
         if self.signal_when_cfg["signal_when"]:
-            self.conditions[self.signal_when_cfg["signal_when"]] = {
-                "satisfied": False,
-                "safety_critical": self.signal_when_cfg["safety_critical"],
-                "autonomy_critical": self.signal_when_cfg["autonomy_critical"],
-                "tags": self.signal_when_cfg["tags"]
-            }
+            key = self.signal_when_cfg["signal_when"]
+            self.conditions[key] = {"satisfied": False, **self.signal_when_cfg}
 
-    def process_lambda_config(self, signal_lambda):
-        """Parses each signal_lambda config to unify structure and fallback timeouts."""
-        config = {
-            "expr": signal_lambda.get("expression", ""),
-            "timeout": signal_lambda.get("timeout", self.timeout),
-            "safety_critical": signal_lambda.get("safety_critical", False),
-            "autonomy_critical": signal_lambda.get("autonomy_critical", False),
-            "default_notifications": signal_lambda.get("default_notifications", self.default_notifications),
-            "repeat_exec": signal_lambda.get("repeat_exec", False),
-            "tags": signal_lambda.get("tags", [])
+    def process_lambda_config(self, lam):
+        return {
+            "expr": lam["expression"],
+            "original_expr": lam["expression"],
+            "timeout": max(lam.get("timeout", self.timeout), 0.1),
+            "safety_critical":   lam.get("safety_critical", False),
+            "autonomy_critical": lam.get("autonomy_critical", False),
+            "process_indices":   lam.get("process_indices", []),
         }
-        if config["timeout"] <= 0:
-            config["timeout"] = self.timeout
-        return config
 
-    def lambda_satisfied_cb(self, expr, msg, config):
-        if expr in self.sat_expr_timer:
-            return
+    def _on_any_msg(self, msg):
+        self._last_msg_time = time.time()
 
-        def on_timeout():
-            self.debug(f"[TopicMonitor] Lambda satisfied: {expr}")
-            self.conditions[expr]["satisfied"] = True
+    def _check_alive_status(self):
+        stats = self.hz_monitor.get_hz() or []
+        rate = stats[0] if stats else 0.0
+        rate_ok = rate >= self.rate
+        # require ALL safety_critical checks
+        crit = [k for k,v in self.conditions.items() if v.get("safety_critical")]
+        lamb_ok = all(self.conditions[k]["satisfied"] for k in crit) if crit else True
+        alive = rate_ok and lamb_ok
+        self.node.get_logger().info(f"[LIVENESS] {self.topic_name}: rate={rate:.2f}/{self.rate}, lambdas={crit} all={lamb_ok}")
+        self.is_alive = alive
 
-            if config.get("default_notifications"):
-                message = f"Lambda '{expr}' satisfied on topic {self.topic_name}"
-                level = "error" if config.get("safety_critical") else "warn"
-
-                if self._event_callback:
-                    self._event_callback(message, level, msg=msg, topic_name=self.topic_name)
-
-                if level == "error":
-                    self.node.get_logger().error(message)
-                else:
-                    self.node.get_logger().warn(message)
-
-            # Here, mimic ROS1 by calling execute() when the condition is met.
-            if not config.get("repeat_exec", False):
-                # process_indices should be provided in your YAML for this lambda.
-                self.execute(msg, config.get("process_indices"))
-            # Optionally, if repeat_exec is enabled, you could set up a repeat timer.
-
-        with self._lock:
-            self.sat_expr_timer[expr] = self.node.create_timer(
-                config["timeout"], lambda: self._on_lambda_timeout(expr, on_timeout)
-            )
-
-    def _on_lambda_timeout(self, expr, callback):
-        """Helper to cancel the timer and then run the provided callback."""
-        with self._lock:
-            if expr in self.sat_expr_timer:
-                self.sat_expr_timer[expr].cancel()
-                del self.sat_expr_timer[expr]
-        callback()
-
-    def lambda_unsatisfied_cb(self, expr):
-        """Called when the lambda condition is no longer satisfied."""
-        with self._lock:
-            if expr in self.sat_expr_timer:
-                self.sat_expr_timer[expr].cancel()
-                del self.sat_expr_timer[expr]
-        if expr in self.conditions:
-            self.conditions[expr]["satisfied"] = False
+    def _check_autonomy_status(self):
+        stats = self.hz_monitor.get_hz() or []
+        rate = stats[0] if stats else 0.0
+        rate_ok = rate >= self.rate
+        crit = [k for k,v in self.conditions.items() if v.get("autonomy_critical")]
+        lamb_ok = all(self.conditions[k]["satisfied"] for k in crit) if crit else True
+        alive = rate_ok and lamb_ok
+        self.is_autonomy_alive = alive
 
     def published_cb(self, msg):
-        """Called when a 'published' message is received."""
-        self.debug(f"[TopicMonitor] Topic {self.topic_name} is published")
         if "published" in self.conditions:
             self.conditions["published"]["satisfied"] = True
 
+    def lambda_satisfied_cb(self, expr, msg, cfg):
+        with self._lock:
+            if not self.conditions[expr]["satisfied"]:
+                self.conditions[expr]["satisfied"] = True
+
+    def lambda_unsatisfied_cb(self, expr):
+        with self._lock:
+            self.conditions[expr]["satisfied"] = False
+
+    def check_not_published(self):
+        if self.signal_when_cfg.get("signal_when","")=="not published":
+            stats = self.hz_monitor.get_hz()
+            if stats is None and not self.conditions["not published"]["satisfied"]:
+                self.conditions["not published"]["satisfied"] = True
+                if self.signal_when_cfg["default_notifications"]:
+                    lvl = "error" if self.signal_when_cfg["safety_critical"] else "warn"
+                    self._event_callback(f"Topic {self.topic_name} not published", lvl)
+
     def log_hz_stats(self):
-        """Timer callback to log frequency stats from ROSTopicHz."""
-        if not self.hz_monitor.enabled:
-            return
         stats = self.hz_monitor.get_hz()
         if stats:
-            rate, min_d, max_d, std_d, n = stats
-            if self.enable_internal_logs:
-                self.node.get_logger().info(
-                    f"[HzMonitor] Rate={rate:.2f} Hz | Min={min_d:.3f}s | Max={max_d:.3f}s | Std={std_d:.4f}s | N={n}"
-                )
-        else:
-            if self.enable_internal_logs:
-                self.node.get_logger().info("[HzMonitor] No Hz stats yet. Waiting for more data.")
-
-    def execute(self, msg=None, process_indices=None):
-        """Triggers the executor to run configured processes if available."""
-        if self.processes and self.executor:
-            self.executor.execute(msg, process_indices)
+            rate, *_ = stats
+            self.node.get_logger().info(f"[HzMonitor] {self.topic_name} Rate={rate:.2f}Hz")
 
     def run(self):
-        """Background thread spin loop for the TopicMonitor's node."""
-        while True:
-            if not self._stop_event.is_set():
-                rclpy.spin_once(self.node, timeout_sec=0.1)
-            else:
-                time.sleep(0.1)
+        while not self._stop_event.is_set():
+            rclpy.spin_once(self.node, timeout_sec=0.1)
 
     def stop_monitor(self):
         self._stop_event.set()
@@ -247,13 +215,11 @@ class TopicMonitor(Thread):
 
     def start_monitor(self):
         self._stop_event.clear()
-        self.node.get_logger().info(f"[TopicMonitor] Restarting monitor for {self.topic_name}")
         self.hz_monitor.start_monitoring(self.msg_type, self.qos_profile)
 
+    def kill_monitor(self):
+        self.stop_monitor()
+        self.node.destroy_node()
+
     def get_node(self):
-        """Returns the node so it can be added to an executor externally."""
         return self.node
-
-    def event_callback(message, level="info", msg=None, topic_name=None):
-        print(f"[{level.upper()}] {message}")
-

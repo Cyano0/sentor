@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 @author: Francesco Del Duchetto (FDelDuchetto@lincoln.ac.uk)
 @author: Adam Binch (abinch@sagarobotics.com)
@@ -26,7 +26,7 @@ class ROSTopicHz:
         self.last_printed_time = None
         self.prev_time = None
         self.times = []
-        self.msg_tn = None 
+        self.msg_tn = None  # <-- ✅ This was missing
         self.node.get_logger().info(f"[ROSTopicHz] Initialized for {self.topic_name} with window {self.window_size}")
         # self._stop_event = Event()
         # Accept stop_event from outside or create internally
@@ -40,6 +40,7 @@ class ROSTopicHz:
             self.subscription = self.node.create_subscription(
                 msg_type, self.topic_name, self.callback_hz, qos_profile
             )
+            # self.node.get_logger().info(f"[HzMonitor] Subscription to {self.topic_name} created")
             self.times.clear()
             self.last_msg_time = None
             self.enabled = True
@@ -66,6 +67,7 @@ class ROSTopicHz:
     def callback_hz(self, msg):
         # if self._stop_event and self._stop_event.is_set():
         #     return
+        # self.node.get_logger().info(f"[HzMonitor] callback_hz fired on {self.topic_name}")
         now = self.node.get_clock().now().nanoseconds / 1e9
         with self.lock:
             if self.last_msg_time is not None:
@@ -85,10 +87,60 @@ class ROSTopicHz:
         stddev = statistics.stdev(self.times) if len(self.times) > 1 else 0.0
         return 1.0 / mean, min(self.times), max(self.times), stddev, len(self.times)
 
+    # def callback_hz(self, msg):
+    #     # self.node.get_logger().info(
+    #     #     f"[HzMonitor] callback_hz triggered! times before: {len(self.times)}"
+    #     # )
+    #     if self._stop_event.is_set():
+    #         return
+        
+    #     now = self.node.get_clock().now().nanoseconds / 1e9  # Time in seconds
+
+    #     with self.lock:
+    #         if self.prev_time is None:
+    #             self.prev_time = now
+    #             return
+
+    #         delta = now - self.prev_time
+    #         self.prev_time = now
+
+    #         self.times.append(delta)
+    #         if len(self.times) > self.window_size:
+    #             self.times.pop(0)
+    #     # self.node.get_logger().info(
+    #     #     f"[HzMonitor] callback_hz done. times after: {len(self.times)}"
+    #     # )
+    # def callback_hz(self, msg):
+    #     if self._stop_event and self._stop_event.is_set():
+    #         return
+    #     if not self.subscription:  # If the subscription was destroyed, do nothing
+    #         return
+    #     now = self.node.get_clock().now().nanoseconds / 1e9
+    #     if self.last_msg_time is not None:
+    #         delta = now - self.last_msg_time
+    #         self.times.append(delta)
+    #         if len(self.times) > self.window_size:
+    #             self.times.pop(0)
+    #     self.last_msg_time = now
+
     def callback_hz_throttled(self, msg):
         self.throttle += 1
         if self.throttle % self.throttle_val == 0:
             self.callback_hz(msg)
+
+    # def get_hz(self):
+    #     with self.lock:
+    #         if not self.times or len(self.times) < 2:
+    #             return None
+            
+    #         n = len(self.times)
+    #         mean = sum(self.times) / n
+    #         rate = 1.0 / mean if mean > 0 else 0.0
+    #         std_dev = math.sqrt(sum((x - mean) ** 2 for x in self.times) / n)
+    #         max_delta = max(self.times)
+    #         min_delta = min(self.times)
+
+    #         return rate, min_delta, max_delta, std_dev, n
 
     def print_hz(self, logger):
         stats = self.get_hz()
