@@ -177,4 +177,16 @@ ros2 run sentor test_sentor.py \
     -p config_file:=/path/to/monitor.yaml \
     -p safety_pub_rate:=1.0 \
     -p safe_operation_timeout:=5.0
+```
 
+ **Note**
+
+- /safety/heartbeat toggles **TRUE** only when all safety-critical items pass.
+
+- /warning/heartbeat toggles **TRUE** when autonomy-critical items pass.
+
+- Killing a safety-critical publisher flips both beats to FALSE immediately.
+
+- Killing only an autonomy-critical node flips warning beat but leaves safety unchanged.
+
+- If desired, run ros2 topic echo /safety/heartbeat and /warning/heartbeat in separate terminals to verify.
