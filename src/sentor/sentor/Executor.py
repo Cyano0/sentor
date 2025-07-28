@@ -30,8 +30,8 @@ from rcl_interfaces.msg import SetParametersResult
 # Import standard Python libraries
 import os
 import numpy as np
+import importlib
 import math
-import subprocess
 import time
 from threading import Lock
 import subprocess
@@ -139,39 +139,61 @@ class Executor(Node):
             self.event_cb(self.init_err_str.format("call", str(e)), "warn")
             self.processes.append("not_initialized")
         
-    def get_topic_type(self, topic_name):
-        """ Automatically retrieves the topic type using the ROS2 CLI """
+    def get_topic_msg_class(self, topic_name):
+        """Return the *message class* for *topic_name* using rclpy APIs.
+
+        Caches lookups to avoid repeated expensive graph traversals.
+        """
+        # 1. Cached already? --------------------------------------------------
+        if topic_name in self.topic_type_cache:
+            return self.topic_type_cache[topic_name]
+
+        # 2. Query the ROS 2 graph -------------------------------------------
+        topic_names_and_types = self.get_topic_names_and_types()
+        for name, types in topic_names_and_types:
+            if name == topic_name and types:
+                ros2_type = types[0]  # e.g. "std_msgs/msg/String"
+                break
+        else:
+            raise ValueError(f"Unknown topic type for '{topic_name}'. Is it currently advertised?")
+
+        # 3. Convert ROS2 type → Python import path ---------------------------
+        # std_msgs/msg/String -> std_msgs.msg.String
+        parts = ros2_type.split('/')  # [pkg, 'msg', MsgName]
+        if len(parts) != 3 or parts[1] != 'msg':
+            raise ValueError(f"Unexpected type string '{ros2_type}' for topic '{topic_name}'")
+
+        module_name = f"{parts[0]}.msg"
+        class_name = parts[2]
+
         try:
-            result = subprocess.run(["ros2", "topic", "type", topic_name], capture_output=True, text=True)
-            topic_type = result.stdout.strip()
-            if topic_type:
-                return topic_type.replace("/", ".msg.")  # Convert ROS2 format to Python import format
-            else:
-                raise ValueError(f"Unknown topic type for {topic_name}")
-        except Exception as e:
-            raise ValueError(f"Failed to retrieve topic type: {str(e)}")
+            module = importlib.import_module(module_name)
+            msg_class = getattr(module, class_name)
+        except (ImportError, AttributeError) as e:
+            raise ValueError(f"Cannot import message class for '{ros2_type}': {e}")
+
+        # 4. Cache & return ----------------------------------------------------
+        self.topic_type_cache[topic_name] = msg_class
+        return msg_class
 
     def init_publish(self, process):
         try:
             topic_name = self.get_param_name(process["publish"]["topic_name"])
-            msg_type = self.get_topic_type(topic_name)
+            msg_class = self.get_topic_msg_class(topic_name)
 
-            pub = self.create_publisher(msg_type, topic_name, 10)
-            
-            msg = msg_type()
+            pub = self.create_publisher(msg_class, topic_name, 10)
+
+            msg = msg_class()
             for arg in process["publish"]["topic_args"]:
                 exec(arg)
 
-            d = {
+            self.processes.append({
                 "name": "publish",
                 "verbose": self.is_verbose(process["publish"]),
                 "def_msg": (f"Publishing to topic '{topic_name}'", "info", msg),
                 "func": "self.publish(**kwargs)",
                 "kwargs": {"pub": pub, "msg": msg},
-            }
-
-            self.processes.append(d)
-
+            })
         except Exception as e:
             self.event_cb(self.init_err_str.format("publish", str(e)), "warn")
             self.processes.append("not_initialized")
