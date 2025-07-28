@@ -75,7 +75,7 @@ class SafetyMonitor(Node):
             alive = getattr(m, self.attr)
             # pick human‐readable name: topic_name or target
             name = getattr(m, 'topic_name', None) or getattr(m, 'target', '<unknown>')
-            self.get_logger().info(f"[SAFETY] {name}.is_{self.attr} = {alive}")
+            self.get_logger().info(f"[SAFETY] {name}.{self.attr} = {alive}")
             states.append(alive)
 
         # arm the “all good” timer if needed
