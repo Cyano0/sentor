@@ -30,5 +30,3 @@ FROM depbuilder AS final
 
 # add sudo without password
 ENV DEBIAN_FRONTEND=noninteractive
-
-USER ros

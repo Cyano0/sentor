@@ -12,7 +12,6 @@
 
 	"postStartCommand": "/opt/entrypoint.sh /bin/true; .devcontainer/post-create.sh",
 
-	"remoteUser": "ros",
 	"updateRemoteUserUID": true, // ensure internal user has the same UID as the host user and update file permissions
 	"customizations": {
 		"vscode": {
