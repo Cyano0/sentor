@@ -26,7 +26,8 @@ RUN rosdep update --rosdistro ${ROS_DISTRO} && apt-get update
 RUN cd /tmp/src && rosdep install --from-paths . --ignore-src -r -y && cd && rm -rf /tmp/src
 
 FROM depbuilder AS final
-# add user ros with sudo rights if it doesn't exist
+
+RUN pip install black flake8
 
 # add sudo without password
 ENV DEBIAN_FRONTEND=noninteractive

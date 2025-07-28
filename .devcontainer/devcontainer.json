@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-	"name": "L-CAS Humble CUDA-OpenGL Devcontainer",
+	"name": "L-CAS ROS Humble Devcontainer for Sentor",
 	"build": {
 		"dockerfile": "./Dockerfile",
 		"args": {
