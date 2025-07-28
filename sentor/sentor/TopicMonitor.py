@@ -80,7 +80,7 @@ class TopicMonitor(Thread):
         # thread‐safe executor for any “processes”
         self.executor = Executor(processes, event_callback) if processes else None
 
-        # --- THIS WAS MISSING in your version! ----------------------------
+        
         # Build self.signal_when_cfg and seed self.conditions for “signal_when”
         self.process_signal_config()
         # ------------------------------------------------------------------
