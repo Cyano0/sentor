@@ -12,9 +12,11 @@
 
   <build_depend>rclpy</build_depend>
   <build_depend>sentor_msgs</build_depend>
+  <build_depend>control_msgs</build_depend>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sentor_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
