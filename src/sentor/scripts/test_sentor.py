@@ -178,28 +178,6 @@ if __name__ == "__main__":
 
 
 
-# #!/usr/bin/env python3
-# import rclpy
-# import yaml
-# import time
-# import signal
-# import os
-# from sentor.TopicMonitor import TopicMonitor
-# from sentor.MultiMonitor import MultiMonitor
-# from sentor.SafetyMonitor import SafetyMonitor
-# from std_msgs.msg import String
-# from sentor_msgs.msg import SentorEvent
-# from std_srvs.srv import Empty
-# import importlib
-# from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
-# from rclpy.executors import MultiThreadedExecutor
-
-
-# topic_monitors = []
-# event_pub = None
-# rich_event_pub = None
-# multi_monitor = None
-
 # def __signal_handler(signum, frame):
 #     """ Gracefully stop all monitors on SIGINT. """
 #     for topic_monitor in topic_monitors:
