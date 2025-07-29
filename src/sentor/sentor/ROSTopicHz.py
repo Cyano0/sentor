@@ -26,7 +26,7 @@ class ROSTopicHz:
         self.last_printed_time = None
         self.prev_time = None
         self.times = []
-        self.msg_tn = None  # <-- ✅ This was missing
+        self.msg_tn = None
         self.node.get_logger().info(f"[ROSTopicHz] Initialized for {self.topic_name} with window {self.window_size}")
         # self._stop_event = Event()
         # Accept stop_event from outside or create internally
