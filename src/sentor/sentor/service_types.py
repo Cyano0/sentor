@@ -25,7 +25,7 @@ from std_srvs.srv import Empty
 from tf2_msgs.srv import FrameGraph
 from turtlesim.srv import Kill, SetPen, Spawn, TeleportAbsolute, TeleportRelative
 from visualization_msgs.srv import GetInteractiveMarkers
-from zed_interfaces.srv import SetPose, SetROI, StartSvoRec
+from zed_msgs.srv import SetPose, SetROI, StartSvoRec
 from rcl_interfaces.srv import GetParameters, SetParameters, ListParameters
 from lifecycle_msgs.srv import GetState, ChangeState
 from nav_msgs.srv import GetPlan
