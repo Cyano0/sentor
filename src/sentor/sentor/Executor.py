@@ -68,7 +68,8 @@ class Executor(Node):
         super().__init__('executor_node')
         self.config = config
         self.event_cb = event_cb
-        
+        self.topic_type_cache: dict[str, type] = {} # NEW: cache to avoid repeating expensive look‑ups
+
         self.init_err_str = "Unable to initialize process of type '{}': {}"
         self._lock = Lock()
         self.processes = []
