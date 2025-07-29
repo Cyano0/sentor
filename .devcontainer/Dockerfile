@@ -10,6 +10,7 @@ RUN apt-get update \
     && apt-get install -qq -y --no-install-recommends \
     git \
     python3-pip \
+    ros-humble-controller-manager-msgs \
     python3-rosdep
 
 # get the source tree and analyse it for its package.xml only
