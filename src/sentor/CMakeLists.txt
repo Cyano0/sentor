@@ -12,7 +12,6 @@ ament_python_install_package(${PROJECT_NAME})
 # Install scripts
 install(PROGRAMS
   scripts/sentor_node.py
-  scripts/test_sentor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
